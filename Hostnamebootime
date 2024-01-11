@@ -1,0 +1,18 @@
+- name: Gather hostname and boot time
+  hosts: all
+  tasks:
+    - name: Get the hostname
+      ansible.builtin.command: hostname
+      register: hostname_output
+
+    - name: Show the hostname
+      ansible.builtin.debug:
+        msg: "The hostname is {{ hostname_output.stdout }}"
+
+    - name: Get the boot time
+      ansible.builtin.shell: who -b
+      register: boot_time_output
+
+    - name: Show the boot time
+      ansible.builtin.debug:
+        msg: "The boot time is {{ boot_time_output.stdout }}"
