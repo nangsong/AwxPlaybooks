@@ -1,0 +1,13 @@
+- name: Install Python on Windows servers
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ensure Chocolatey is installed
+      ansible.windows.win_chocolatey:
+        name: chocolatey
+        state: present
+
+    - name: Install latest version of Python
+      ansible.windows.win_chocolatey:
+        name: python
+        state: latest
