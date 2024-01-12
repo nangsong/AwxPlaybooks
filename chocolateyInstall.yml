@@ -1,0 +1,22 @@
+- name: Install Chocolatey on Windows Servers
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check if Chocolatey is installed
+      win_shell: choco -v
+      register: choco_installed
+      ignore_errors: yes
+
+    - name: Download and install Chocolatey
+      win_shell: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force;
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
+        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+      when: choco_installed.rc != 0
+
+    - name: Ensure Chocolatey is added to the PATH
+      win_environment:
+        state: present
+        name: PATH
+        value: 'C:\ProgramData\chocolatey\bin'
+        level: machine
