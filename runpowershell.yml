@@ -1,6 +1,6 @@
 ---
 - name: Run PowerShell Script on Windows Host
-  hosts: windows_hosts  # Replace with your target group or host
+  hosts: all
   gather_facts: no
 
   tasks:
