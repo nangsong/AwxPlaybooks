@@ -10,6 +10,7 @@
         category_names:
           - CriticalUpdates
           - SecurityUpdates
+          - ImportantUpdates
       register: update_result
       ignore_errors: yes
 
