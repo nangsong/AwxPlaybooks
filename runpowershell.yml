@@ -1,6 +1,6 @@
 ---
 - name: Run PowerShell Script on Windows Host
-  hosts: all
+  hosts: windows_hosts  # Replace with your target group or host
   gather_facts: no
 
   tasks:
@@ -11,4 +11,4 @@
 
     - name: Show script output
       debug:
-        msg: "{{ script_output.output }}"
+        msg: "{{ script_output.host_out }}"
