@@ -1,0 +1,14 @@
+---
+- name: Run PowerShell Script on Windows Host
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Execute diskinfo.ps1 script
+      ansible.windows.win_powershell:
+        script: "{{ lookup('file', 'diskinfo.ps1') }}"
+      register: script_output
+
+    - name: Show script output
+      debug:
+        msg: "{{ script_output.output }}"
