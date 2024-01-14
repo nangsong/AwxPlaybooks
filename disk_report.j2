@@ -1,7 +1,7 @@
 Disk Information for {{ inventory_hostname }}:
-Total Size: {{ disk_info.stdout_lines[0].TotalSize }} GB
-Used Space: {{ disk_info.stdout_lines[0].Used }} GB
-Free Space: {{ disk_info.stdout_lines[0].Free }} GB
+Total Size: {{ disk_info.stdout_lines[0].TotalSizeGB }} GB
+Used Space: {{ disk_info.stdout_lines[0].UsedGB }} GB
+Free Space: {{ disk_info.stdout_lines[0].FreeGB }} GB
 Percent Free: {{ disk_info.stdout_lines[0].PercentFree }}%
 
 Files over 250MB:
