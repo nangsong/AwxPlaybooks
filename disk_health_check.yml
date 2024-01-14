@@ -26,3 +26,18 @@
     dest: "\\\\DC\\MyShared\\{{ inventory_hostname }}_disk_report.txt"
   when: high_usage
 
+  - name: Send email with disk report
+  ansible.builtin.mail:
+    host: mail.htttckumba.com
+    port: 465
+    username: awx@htttckumba.com
+    password: password@123
+    to:
+      - nangsonghermann@gmail.com
+      - hermannnangsong@gmail.com
+    subject: Disk Health Report for {{ inventory_hostname }}
+    body: The disk health report for {{ inventory_hostname }} is attached.
+    attach: \\\\DC\\MyShared\\{{ inventory_hostname }}_disk_report.txt
+    secure: startssl
+  when: high_usage
+  delegate_to: localhost
