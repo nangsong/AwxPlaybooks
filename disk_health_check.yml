@@ -13,7 +13,7 @@
 
   - name: Get C drive disk information
     ansible.windows.win_shell: |
-      Get-PSDrive C | Select-Object @{Name='UsedGB';Expression={[math]::Round(($_.Used / 1GB), 2)}},@{Name='FreeGB';Expression={[math]::Round(($_.Free / 1GB), 2)}},@{Name='TotalSizeGB';Expression={[math]::Round((($_.Used + $_.Free) / 1GB), 2)}},@{Name='PercentFree';Expression={if($_.Used -ne 0) { [math]::Round(($_.Free / ($_.Used + $_.Free) * 100), 2)} else {0}}}
+      Get-PSDrive C | Select-Object @{Name='Used(GB)';Expression={[math]::Round(($_.Used / 1GB), 2)}},@{Name='Free(GB)';Expression={[math]::Round(($_.Free / 1GB), 2)}},@{Name='TotalSize(GB)';Expression={[math]::Round((($_.Used + $_.Free) / 1GB), 2)}},@{Name='PercentFree';Expression={if($_.Used -ne 0) { [math]::Round(($_.Free / ($_.Used + $_.Free) * 100), 2)} else {0}}}
     register: disk_info
 
   - name: Check if C drive usage is above 80%
