@@ -5,7 +5,7 @@
   - name: Create user
     ansible.windows.win_user:
       name: Gael
-      password: password@123
+      password: XXXXXXXXX
       state: present
   - name: Add user to Administrators group
     ansible.windows.win_group_membership:
