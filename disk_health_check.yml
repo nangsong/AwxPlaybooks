@@ -43,7 +43,7 @@
       host: mail.htttckumba.com
       port: 465
       username: awx@htttckumba.com
-      password: Doxa8@rose
+      password: XXXXXXXXXXXXX
       to:
         - nangsonghermann@gmail.com
         - hermannnangsong@gmail.com
