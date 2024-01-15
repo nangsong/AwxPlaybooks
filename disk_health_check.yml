@@ -1,43 +1,57 @@
 ---
 - name: Windows Disk Health Check
   hosts: windows
-  gather_facts: no
+  gather_facts: false
 
   tasks:
+  - name: Gather facts for date and time
+    ansible.builtin.setup:
+      gather_subset:
+        - '!all'
+        - '!any'
+        - 'date_time'
+
   - name: Get C drive disk information
-  ansible.windows.win_shell: |
-    Get-PSDrive C | Select-Object @{Name='Used (GB)';Expression={[math]::Round(($_.Used / 1GB), 2)}},@{Name='Free (GB)';Expression={[math]::Round(($_.Free / 1GB), 2)}},@{Name='TotalSize (GB)';Expression={[math]::Round((($_.Used + $_.Free) / 1GB), 2)}},@{Name='PercentFree';Expression={if($_.Used -ne 0) { [math]::Round(($_.Free / ($_.Used + $_.Free) * 100), 2)} else {0}}}
-  register: disk_info
+    ansible.windows.win_shell: |
+      Get-PSDrive C | Select-Object @{Name='UsedGB';Expression={[math]::Round(($_.Used / 1GB), 2)}},@{Name='FreeGB';Expression={[math]::Round(($_.Free / 1GB), 2)}},@{Name='TotalSizeGB';Expression={[math]::Round((($_.Used + $_.Free) / 1GB), 2)}},@{Name='PercentFree';Expression={if($_.Used -ne 0) { [math]::Round(($_.Free / ($_.Used + $_.Free) * 100), 2)} else {0}}}
+    register: disk_info
 
   - name: Check if C drive usage is above 80%
     ansible.builtin.set_fact:
       high_usage: "{{ disk_info.stdout_lines[0].PercentFree | float < 20.0 }}"
-  
+
+  - name: Create a folder with the current date
+    ansible.windows.win_file:
+      path: "\\\\DC\\MyShared\\{{ ansible_date_time.date }}"
+      state: directory
+    when: high_usage
   - name: Find files over 250MB on C drive
     ansible.windows.win_shell: |
-      Get-ChildItem C:\ -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Length -gt 262144000 } | Select-Object FullName, @{Name="SizeInMB";Expression={"{0:N2}" -f ($_.Length / 1MB)}}
+      Get-ChildItem C:\ -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Length -gt 262144000 } | Select-Object FullName, @{Name="SizeInGB";Expression={"{0:N2}" -f ($_.Length / 1GB)}}
     register: large_files
     when: high_usage
     ignore_errors: yes
 
   - name: Generate report if usage is more than 80%
-  ansible.builtin.template:
-    src: disk_report.j2
-    dest: "\\\\DC\\MyShared\\{{ inventory_hostname }}_disk_report.txt"
-  when: high_usage
+    ansible.builtin.template:
+      src: disk_report.j2
+      dest: "\\\\DC\\MyShared\\{{ ansible_date_time.date }}\\{{ inventory_hostname }}_disk_report.txt"
+    when: high_usage
 
-  - name: Send email with disk report
-  ansible.builtin.mail:
-    host: mail.htttckumba.com
-    port: 465
-    username: awx@htttckumba.com
-    password: password@123
-    to:
-      - nangsonghermann@gmail.com
-      - hermannnangsong@gmail.com
-    subject: Disk Health Report for {{ inventory_hostname }}
-    body: The disk health report for {{ inventory_hostname }} is attached.
-    attach: \\\\DC\\MyShared\\{{ inventory_hostname }}_disk_report.txt
-    secure: startssl
-  when: high_usage
-  delegate_to: localhost
+  -  name: Send email with disk report
+    ansible.builtin.mail:
+      host: mail.htttckumba.com
+      port: 465
+      username: awx@htttckumba.com
+      password: Doxa8@rose
+      to:
+        - nangsonghermann@gmail.com
+        - hermannnangsong@gmail.com
+      subject: Disk Health Report for {{ inventory_hostname }}
+      body: The disk health report for {{ inventory_hostname }} is attached.
+      attach: "\\\\DC\\MyShared\\{{ ansible_date_time.date }}\\{{ inventory_hostname }}_disk_report.txt"
+      secure: starttls
+    when: high_usage
+    delegate_to: localhost
+
+  
