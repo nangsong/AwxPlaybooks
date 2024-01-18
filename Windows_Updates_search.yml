@@ -1,0 +1,20 @@
+---
+- name: Search for windows updates
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Searche for Critical updates
+      win_updates:
+        state: searched
+        category_names:
+          -CriticalUpdates
+        log_path: c:\temp\Critical_updates.log
+
+    - name: Search for security updates
+      win_updates:
+        state: searched
+        category_names: 
+          - SecurityUpdates
+        log_path: c:\temp\Security_updates.log  
+        
