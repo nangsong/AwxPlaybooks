@@ -1,14 +1,17 @@
 ---
-- hosts: windows
+- hosts: windows 
   gather_facts: no
 
+  collections:
+    - chocolatey.chocolatey
+
   tasks:
-    - name: Install 7zip
+    - name: Install 7zip  
       win_chocolatey:
         name: 7zip
         state: present
 
     - name: Install Google Chrome
-      win_chocolatey:
+      win_chocolatey: 
         name: googlechrome
         state: present
