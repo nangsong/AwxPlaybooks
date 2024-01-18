@@ -1,17 +1,15 @@
 ---
-- hosts: windows 
+- hosts: windows
   gather_facts: no
 
-  collections:
-    - chocolatey.chocolatey
-
   tasks:
-    - name: Install 7zip  
-      win_chocolatey:
-        name: 7zip
-        state: present
+    - name: Install 7Zip
+      win_package:
+        path: '\\DC\Myshared\7z2301-x64.exe'
+        product_id: 7-Zip
+        arguments: /S
 
-    - name: Install Google Chrome
-      win_chocolatey: 
-        name: googlechrome
-        state: present
+    - name: Install Chrome
+      win_package:
+        path: '\\DC\Myshared\GoogleChromeStandaloneEnterprise64.msi'
+        product_id: Google Chrome
