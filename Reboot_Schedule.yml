@@ -2,8 +2,6 @@
 - name: Schedule a reboot of a Windows server
   hosts: "{{ hostname }}"
   gather_facts: no
-  vars:
-    hours: "{{hours}}"
  
   tasks:
     - name: Rebooting {{ hostname }} 
