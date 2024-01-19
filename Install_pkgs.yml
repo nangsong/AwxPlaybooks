@@ -4,11 +4,11 @@
   tasks:
     - name: Install 7Zip
       win_package:
-        path: 'C:/Myshared/7z2301-x64.exe'
+        path: '\\DC\Myshared\7z2301-x64.exe'
         product_id: 7-Zip
         arguments: /S
 
     - name: Install Chrome
       win_package:
-        path: 'C:/Myshared/GoogleChromeStandaloneEnterprise64.msi'
+        path: '\\DC\Myshared\GoogleChromeStandaloneEnterprise64.msi'
         product_id: Google Chrome
