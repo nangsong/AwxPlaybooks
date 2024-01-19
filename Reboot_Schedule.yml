@@ -1,0 +1,25 @@
+---
+- hosts: "{{ ansible_hostname |default: localhost}}"
+  vars:
+    #Duration before reboot in hours
+    hours: "{{ hours_before_reboot }}"
+  tasks:
+    - name: Schedule reboot after specified hours
+      win_scheduled_task:
+        name: "Reboot {{ ansible_hostname }}"
+        description: "Rebooting {{ ansible_hostname }} after {{ hours }} hours"
+        actions: 
+          - path: C:\Windows\System32\shutdown.exe
+            arguments: /r /t 0 /f
+        trigger:  
+          type: once
+          start_boundary: "{{ lookup('pipe','date /T') }} {{ lookup('pipe', 'date +%H:%M') }}"
+          minutes_duration: "{{ hours|int * 60 }}"
+          minutes_interval: 60
+        retries: 2
+        retry_interval: 5
+      register: task
+
+    - name: Reboot message
+      win_msg:
+        text: "{{ ansible_hostname }} will reboot after {{ hours }} hours per admin request"
