@@ -13,16 +13,16 @@
     - name: Wait for the specified duration
       pause:
         seconds: "{{ delay_seconds }}"
-      when: delay_seconds > 0
+      when: delay_seconds |int > 0
 
     - name: Reboot the server
       win_reboot:
         msg: "Scheduled reboot by Ansible"
         pre_reboot_delay: 0
         post_reboot_delay: 300
-      when: delay_seconds > 0
+      when: delay_seconds|int > 0
 
     - name: Notify that no reboot is scheduled
       debug:
         msg: "No reboot scheduled as the duration is not greater than 0."
-      when: delay_seconds <= 0
+      when: delay_seconds | int <= 0
