@@ -1,7 +1,7 @@
 ---
 - hosts: all
   gather_facts: no
-   tasks:
+  tasks:
     - name: Install 7Zip
       win_package:
         path: 'smb://192.168.131.132/Myshared/7z2301-x64.exe'
