@@ -1,25 +1,28 @@
 ---
-- hosts: "{{ ansible_hostname |default: localhost}}"
+- name: Schedule a reboot of a Windows server
+  hosts: "{{ hostname }}"
+  gather_facts: no
   vars:
-    #Duration before reboot in hours
-    hours: "{{ hours_before_reboot }}"
+    hours: "{{hours}}"
+   
   tasks:
-    - name: Schedule reboot after specified hours
-      win_scheduled_task:
-        name: "Reboot {{ ansible_hostname }}"
-        description: "Rebooting {{ ansible_hostname }} after {{ hours }} hours"
-        actions: 
-          - path: C:\Windows\System32\shutdown.exe
-            arguments: /r /t 0 /f
-        trigger:  
-          type: once
-          start_boundary: "{{ lookup('pipe','date /T') }} {{ lookup('pipe', 'date +%H:%M') }}"
-          minutes_duration: "{{ hours|int * 60 }}"
-          minutes_interval: 60
-        retries: 2
-        retry_interval: 5
-      register: task
+    - name: Calculate delay in seconds
+      set_fact:
+        delay_seconds: "{{ hours | int * 3600 }}"
 
-    - name: Reboot message
-      win_msg:
-        text: "{{ ansible_hostname }} will reboot after {{ hours }} hours per admin request"
+    - name: Wait for the specified duration
+      pause:
+        seconds: "{{ delay_seconds }}"
+      when: delay_seconds > 0
+
+    - name: Reboot the server
+      win_reboot:
+        msg: "Scheduled reboot by Ansible"
+        pre_reboot_delay: 0
+        post_reboot_delay: 300
+      when: delay_seconds > 0
+
+    - name: Notify that no reboot is scheduled
+      debug:
+        msg: "No reboot scheduled as the duration is not greater than 0."
+      when: delay_seconds <= 0
