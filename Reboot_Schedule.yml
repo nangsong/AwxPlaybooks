@@ -5,7 +5,7 @@
   vars:
     hours: "{{hours}}"
    
- tasks:
+  tasks:
     - name: Calculate the reboot time
       set_fact:
         reboot_time: "{{ '%Y-%m-%d %H:%M:%S' | strftime((ansible_date_time.epoch | int) + (hours | int * 3600)) }}"
