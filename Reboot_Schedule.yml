@@ -5,24 +5,24 @@
   vars:
     hours: "{{hours}}"
    
-  tasks:
-    - name: Calculate delay in seconds
+ tasks:
+    - name: Calculate the reboot time
       set_fact:
-        delay_seconds: "{{ hours | int * 3600 }}"
+        reboot_time: "{{ '%Y-%m-%d %H:%M:%S' | strftime((ansible_date_time.epoch | int) + (hours | int * 3600)) }}"
 
-    - name: Wait for the specified duration
-      pause:
-        seconds: "{{ delay_seconds }}"
-      when: delay_seconds |int > 0
+    - name: Schedule the reboot task
+      win_scheduled_task:
+        name: "ScheduledReboot"
+        description: "Ansible scheduled reboot"
+        actions:
+        - path: "C:\\Windows\\System32\\shutdown.exe"
+          arguments: "/r /t 0"
+        triggers:
+        - type: "once"
+          start_boundary: "{{ reboot_time }}"
+        state: present
+        enabled: yes
 
-    - name: Reboot the server
-      win_reboot:
-        msg: "Scheduled reboot by Ansible"
-        pre_reboot_delay: 0
-        post_reboot_delay: 300
-      when: delay_seconds|int > 0
-
-    - name: Notify that no reboot is scheduled
+    - name: Confirm scheduled reboot
       debug:
-        msg: "No reboot scheduled as the duration is not greater than 0."
-      when: delay_seconds | int <= 0
+        msg: "Reboot scheduled at {{ reboot_time }}"
