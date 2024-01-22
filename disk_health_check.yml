@@ -1,6 +1,6 @@
 ---
 - name: Windows Disk Health Check
-  hosts: windows
+  hosts: all
   gather_facts: false
 
   tasks:
