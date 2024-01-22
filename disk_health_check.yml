@@ -21,10 +21,10 @@
         high_usage: "{{ (disk_info.stdout | from_json).PercentFree | float < 85.0 }}"
 
     - name: Create a folder with the current date
-      ansible.windows.win_file:
-        path: "\\\\DC\\MyShared\\{{ ansible_date_time.date }}"
-        state: directory
+      ansible.windows.win_command: mkdir "\\DC\MyShared\{{ ansible_date_time.date }}"
       when: high_usage
+      ignore_errors: yes  # Consider handling errors more gracefully
+
 
     - name: Find files over 100MB on C drive
       ansible.windows.win_shell: |
