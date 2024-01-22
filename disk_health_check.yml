@@ -12,13 +12,13 @@
         - 'date_time'
 
   - name: Get C drive disk information
-    ansible.windows.win_shell: |
-      Get-PSDrive C | Select-Object @{Name='Used(GB)';Expression={[math]::Round(($_.Used / 1GB), 2)}},@{Name='Free(GB)';Expression={[math]::Round(($_.Free / 1GB), 2)}},@{Name='TotalSize(GB)';Expression={[math]::Round((($_.Used + $_.Free) / 1GB), 2)}},@{Name='PercentFree';Expression={if($_.Used -ne 0) { [math]::Round(($_.Free / ($_.Used + $_.Free) * 100), 2)} else {0}}}
-    register: disk_info
+  ansible.windows.win_shell: |
+    Get-PSDrive C | Select-Object @{Name='Used(GB)';Expression={[math]::Round(($_.Used / 1GB), 2)}},@{Name='Free(GB)';Expression={[math]::Round(($_.Free / 1GB), 2)}},@{Name='TotalSize(GB)';Expression={[math]::Round((($_.Used + $_.Free) / 1GB), 2)}},@{Name='PercentFree';Expression={if($_.Used -ne 0) { [math]::Round(($_.Free / ($_.Used + $_.Free) * 100), 2)} else {0}}} | ConvertTo-Json
+  register: disk_info
 
-  - name: Check if C drive usage is above 80%
-    ansible.builtin.set_fact:
-      high_usage: "{{ disk_info.stdout_lines[0].PercentFree | float < 45.0 }}"
+- name: Check if C drive usage is above 80%
+  ansible.builtin.set_fact:
+    high_usage: "{{ (disk_info.stdout | from_json).PercentFree | float < 45.0 }}"
 
   - name: Create a folder with the current date
     ansible.windows.win_file:
