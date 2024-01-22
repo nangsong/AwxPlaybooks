@@ -18,7 +18,7 @@
 
     - name: Check if C drive usage is above 80%
       ansible.builtin.set_fact:
-        high_usage: "{{ (disk_info.stdout | from_json).PercentFree | float < 45.0 }}"
+        high_usage: "{{ (disk_info.stdout | from_json).PercentFree | float < 85.0 }}"
 
     - name: Create a folder with the current date
       ansible.windows.win_file:
@@ -26,9 +26,9 @@
         state: directory
       when: high_usage
 
-    - name: Find files over 250MB on C drive
+    - name: Find files over 100MB on C drive
       ansible.windows.win_shell: |
-        Get-ChildItem C:\ -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Length -gt 262144000 } | Select-Object FullName, @{Name="SizeInGB";Expression={"{0:N2}" -f ($_.Length / 1GB)}}
+        Get-ChildItem C:\ -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Length -gt 104857600 } | Select-Object FullName, @{Name="SizeInGB";Expression={"{0:N2}" -f ($_.Length / 1GB)}}
       register: large_files
       when: high_usage
       ignore_errors: yes
