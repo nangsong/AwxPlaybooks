@@ -18,7 +18,7 @@
 
   - name: Check if C drive usage is above 80%
     ansible.builtin.set_fact:
-      high_usage: "{{ disk_info.stdout_lines[0].PercentFree | float < 20.0 }}"
+      high_usage: "{{ disk_info.stdout_lines[0].PercentFree | float < 45.0 }}"
 
   - name: Create a folder with the current date
     ansible.windows.win_file:
