@@ -9,14 +9,14 @@
         state: downloaded
         category_names: 
          - CriticalUpdates
-        log_path: c:\temp\critical_updates.log
+        log_path: c:\critical_updates.log
 
     - name: Download security updates
       win_updates:  
         state: downloaded
         category_names:
          - SecurityUpdates
-        log_path: c:\temp\security_updates.log
+        log_path: c:\security_updates.log
 
     - name: Reboot system to apply updates
       win_reboot:
