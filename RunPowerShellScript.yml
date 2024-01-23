@@ -6,7 +6,7 @@
     - name: copy script from shared to local
       win_shell: hostname
 
-     - name: Running local script
+    - name: Running local script
       win_shell: |
         $driveLetter = "C"
         $driveLetter1 = "C:"
