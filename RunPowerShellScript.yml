@@ -9,7 +9,7 @@
     - name: Copying Script
       win_copy: 
         src: \\DC\MyShared\disks_infos.ps1
-        dest: c:\disks_infos.ps1
+        dest: C:\disks_infos.ps1
 
     - name: Running local script
-      win_shell: c:\disks_infos.ps1
+      win_shell: C:\disks_infos.ps1
