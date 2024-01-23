@@ -1,0 +1,31 @@
+---
+- name: This is a playbook to test tags in AWX
+  hosts: "{{ hostname }}"
+  gather_facts: no
+  vars_prompt:
+    - name: x
+      prompt: "Enter the Value of X: "
+      private: no
+    - name: y
+      prompt: "Enter the value of Y:"
+      private: no
+  tasks:
+    - name: Addition
+      debug:
+        msg: "The value of {{ x | int }} + {{ y | int }} is: {{ (x | int) + (y | int) }}"
+      tags: addition
+
+    - name: Subtraction
+      debug:
+        msg: "The value of {{ x | int }} - {{ y | int }} is: {{ (x | int) - (y | int) }}"
+      tags: subtraction
+
+    - name: Multiplication
+      debug:
+        msg: "The value of {{ x | int }} * {{ y | int }} is: {{ (x | int) * (y | int) }}"
+      tags: multiply
+
+    - name: Division
+      debug:
+        msg: "The value of {{ x | int }} / {{ y | int }} is: {{ (x | int) / (y | int) }}"
+      tags: divide
