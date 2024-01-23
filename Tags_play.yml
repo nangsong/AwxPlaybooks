@@ -2,13 +2,6 @@
 - name: This is a playbook to test tags in AWX
   hosts: "{{ hostname }}"
   gather_facts: no
-  vars_prompt:
-    - name: x
-      prompt: "Enter the Value of X: "
-      private: no
-    - name: y
-      prompt: "Enter the value of Y:"
-      private: no
   tasks:
     - name: Addition
       debug:
