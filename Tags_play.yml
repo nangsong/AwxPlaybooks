@@ -6,19 +6,27 @@
     - name: Addition
       debug:
         msg: "The value of {{ x | int }} + {{ y | int }} is: {{ (x | int) + (y | int) }}"
-      tags: addition
+      tags: 
+        - addition
+        - never
 
     - name: Subtraction
       debug:
         msg: "The value of {{ x | int }} - {{ y | int }} is: {{ (x | int) - (y | int) }}"
-      tags: subtraction
+      tags: 
+        - subtraction
+        - never
 
     - name: Multiplication
       debug:
         msg: "The value of {{ x | int }} * {{ y | int }} is: {{ (x | int) * (y | int) }}"
-      tags: multiply
+      tags: 
+        - multiply
+        - never
 
     - name: Division
       debug:
         msg: "The value of {{ x | int }} / {{ y | int }} is: {{ (x | int) / (y | int) }}"
-      tags: divide
+      tags: 
+        - divide
+        - never
