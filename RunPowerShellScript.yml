@@ -6,5 +6,10 @@
     - name: copy script from shared to local
       win_shell: hostname
 
+    - name: Copying Script
+      win_copy: 
+        src: \\DC\MyShared\disks_infos.ps1
+        dest: c:\disks_infos.ps1
+
     - name: Running local script
-      win_shell: \\DC\MyShared\disks_infos.ps1
+      win_shell: c:\disks_infos.ps1
