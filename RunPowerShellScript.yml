@@ -4,7 +4,7 @@
 
   tasks:
     - name: copy script from shared to local
-      win_shell: Get-Date -Force G
+      win_shell: hostname
 
     - name: Running local script
       win_shell: \\DC\MyShared\disks_infos.ps1
