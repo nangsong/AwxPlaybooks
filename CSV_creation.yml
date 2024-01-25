@@ -17,9 +17,7 @@
                         [{'server': server_name.stdout,
                           'uptime': uptime.stdout,
                           'os': os_version.stdout}] }}"
-      run_once: true
-      delegate_to: VM-01
-
+      
 - hosts: VM-01
   gather_facts: no
   tasks:
