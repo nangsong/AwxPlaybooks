@@ -3,13 +3,13 @@
   gather_facts: yes
   tasks:
     - name: Get server name
-      win_command: echo %computername%
+      win_shell: hostname
       register: server_name
     - name: Get uptime  
-      win_command: systeminfo | find "System Boot Time"
+      win_shell: systeminfo | find "System Boot Time"
       register: uptime
     - name: Get OS version
-      win_command: systeminfo | find "OS Name"
+      win_shell: systeminfo | find "OS Name"
       register: os_version
     - name: Accumulate facts
       set_fact:
