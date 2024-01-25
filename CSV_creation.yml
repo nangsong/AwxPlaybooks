@@ -1,41 +1,38 @@
 - hosts: all
   serial: 1
   gather_facts: yes
-
   tasks:
-
-    - name: Get server facts
-      block:
-        - name: Get server name  
-          win_command: echo %computername%
-          register: server_name
-
-        - name: Get uptime
-          win_command: systeminfo | find "System Boot Time" 
-          register: uptime
-
-        - name: Get OS version
-          win_command: systeminfo | find "OS Name"
-          register: os_version
-
-      - name: Accumulate facts
-        set_fact:
-          server_facts: "{{ server_facts|default([]) + 
-                          [{'server': server_name.stdout,
-                            'uptime': uptime.stdout, 
-                            'os': os_version.stdout}] }}"
-        run_once: true
+    - name: Get server name
+      win_command: echo %computername%
+      register: server_name
+    - name: Get uptime  
+      win_command: systeminfo | find "System Boot Time"
+      register: uptime
+    - name: Get OS version
+      win_command: systeminfo | find "OS Name"
+      register: os_version
+    - name: Accumulate facts
+      set_fact:
+        server_facts: "{{ server_facts|default([]) + 
+                        [{'server': server_name.stdout,
+                          'uptime': uptime.stdout,
+                          'os': os_version.stdout}] }}"
+      run_once: true
+      delegate_to: VM-01
 
 - hosts: VM-01
   gather_facts: no
-
   tasks:
-
-    - name: Create CSV file
+    - name: Create facts directory
+      win_file:
+        path: C:\facts
+        state: directory
+      when: server_facts|length > 0
+    - name: Create CSV file 
       win_copy:
         content: |
           {% for server in server_facts %}
-          {{ server.server }},{{ server.uptime }},{{ server.os }}  
+          {{ server.server }},{{ server.uptime }},{{ server.os }}
           {% endfor %}
         dest: C:\facts\server_facts.csv
       when: server_facts|length > 0
