@@ -11,7 +11,7 @@
         $usedSpaceGB = $totalSizeGB - $freeSpaceGB
         $usedPercentage = [math]::Round(($usedSpaceGB / $totalSizeGB) * 100, 0)
 
-        if ($usedPercentage -ge 20) {
+        if ($usedPercentage -ge 80) {
             $output = @{
                 "TotalCapacityGB" = $totalSizeGB;
                 "FreeCapacityGB"  = $freeSpaceGB;
@@ -22,7 +22,14 @@
       register: disk_check_output
       ignore_errors: yes
 
-    - name: Display disk check results
-      ansible.builtin.debug:
-        var: disk_check_output.stdout
+    - name: Store host and disk usage info
+      set_fact:
+        disk_usage_info: "{{ disk_usage_info | default([]) + [{'host': ansible_host, 'data': disk_check_output.stdout | from_json }] }}"
       when: disk_check_output.stdout != ""
+
+    - name: Display hosts with disk space used over 80%
+      ansible.builtin.debug:
+        msg: "{{ disk_usage_info }}"
+      run_once: true
+      delegate_to: localhost
+      when: disk_usage_info is defined and disk_usage_info | length > 0
