@@ -11,7 +11,7 @@
         $usedSpaceGB = $totalSizeGB - $freeSpaceGB
         $usedPercentage = [math]::Round(($usedSpaceGB / $totalSizeGB) * 100, 0)
 
-        if ($usedPercentage -ge 80) {
+        if ($usedPercentage -ge 20) {
             $output = @{
                 "TotalCapacityGB" = $totalSizeGB;
                 "FreeCapacityGB"  = $freeSpaceGB;
