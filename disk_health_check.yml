@@ -1,11 +1,28 @@
-- hosts: "{{hostname}}"
+- name: Check Disk Space on Windows Hosts
+  hosts: all
   gather_facts: no
 
   tasks:
-    - name: Get C drive space facts
-      win_disk_facts:
-        drive: c
+    - name: Check disk usage on C drive
+      ansible.windows.win_shell: |
+        $diskInfo = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+        $totalSizeGB = [math]::Round($diskInfo.Size / 1GB, 2)
+        $freeSpaceGB = [math]::Round($diskInfo.FreeSpace / 1GB, 2)
+        $usedSpaceGB = $totalSizeGB - $freeSpaceGB
+        $usedPercentage = [math]::Round(($usedSpaceGB / $totalSizeGB) * 100, 0)
 
-    - name: Display disk space
-      debug:
-        msg: "Total - {{ ansible_disks['c']['size']|filesizeformat('%0.1f GB') }}, Used - {{ ansible_disks['c']['used']|filesizeformat('%0.1f GB') }}, Free - {{ ansible_disks['c']['free']|filesizeformat('%0.1f GB') }}"
+        if ($usedPercentage -ge 20) {
+            $output = @{
+                "TotalCapacityGB" = $totalSizeGB;
+                "FreeCapacityGB"  = $freeSpaceGB;
+                "UsedPercentage"  = $usedPercentage;
+            }
+            $output | ConvertTo-Json
+        }
+      register: disk_check_output
+      ignore_errors: yes
+
+    - name: Display disk check results
+      ansible.builtin.debug:
+        var: disk_check_output.stdout
+      when: disk_check_output.stdout != ""
