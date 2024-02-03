@@ -8,7 +8,7 @@
 
     - name: Check disk usage
       win_shell: |
-        $threshold = 80
+        $threshold = 20
         $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq "3"}  
         $results = @()
         foreach($disk in $disks) {
