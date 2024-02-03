@@ -1,35 +1,40 @@
-- name: Check Disk Space on Windows Hosts
+---
+- name: Windows Server Disk Health Check
   hosts: all
   gather_facts: no
-
   tasks:
-    - name: Check disk usage on C drive
-      ansible.windows.win_shell: |
-        $diskInfo = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
-        $totalSizeGB = [math]::Round($diskInfo.Size / 1GB, 2)
-        $freeSpaceGB = [math]::Round($diskInfo.FreeSpace / 1GB, 2)
-        $usedSpaceGB = $totalSizeGB - $freeSpaceGB
-        $usedPercentage = [math]::Round(($usedSpaceGB / $totalSizeGB) * 100, 0)
+    - name: Gather disk facts
+      win_disk_facts:
+      register: disk_facts
 
-        if ($usedPercentage -ge 20) {
-            $output = @{
-                "TotalCapacityGB" = $totalSizeGB;
-                "FreeCapacityGB"  = $freeSpaceGB;
-                "UsedPercentage"  = $usedPercentage;
-            }
-            $output | ConvertTo-Json
-        }
-      register: disk_check_output
-      ignore_errors: yes
-
-    - name: Store host and disk usage info
+    - name: Determine disks with 80% or more usage
       set_fact:
-        disk_usage_info: "{{ disk_usage_info | default([]) + [{'host': ansible_host, 'data': disk_check_output.stdout | from_json }] }}"
-      when: disk_check_output.stdout != ""
+        high_usage_disks: "{{ high_usage_disks | default([]) + [item.key] }}"
+      loop: "{{ disk_facts.ansible_facts.disks | dict2items }}"
+      when: 'item.value.size_used / item.value.size_total >= 0.8'
 
-    - name: Display hosts with disk space used over 80%
-      ansible.builtin.debug:
-        msg: "{{ disk_usage_info }}"
-      run_once: true
-      delegate_to: localhost
-      when: disk_usage_info is defined and disk_usage_info | length > 0
+    - name: Display disks with 80% or more usage in tabular form
+      debug:
+        msg: "{{ inventory_hostname }}: {{ high_usage_disks }}"
+      when: high_usage_disks | default([]) | length > 0
+
+    - name: Find the 15 largest files on high usage disks
+      win_shell: |
+        Get-ChildItem -Path '{{ item }}' -Recurse -File | 
+        Sort-Object Length -Descending | 
+        Select-Object -First 15 | 
+        Select-Object FullName, @{Name="SizeInMB";Expression={$_.Length / 1MB}} | 
+        Format-Table -AutoSize | 
+        Out-String -Width 4096
+      register: largest_files
+      loop: "{{ high_usage_disks }}"
+      ignore_errors: yes
+      when: high_usage_disks | default([]) | length > 0
+
+    - name: Create a text file on C: drive listing the 15 largest files
+      win_lineinfile:
+        path: C:\disk_health_check\largest_files_{{ inventory_hostname }}.txt
+        line: "{{ item.stdout }}"
+        create: yes
+      loop: "{{ largest_files.results }}"
+      when: largest_files.results | length > 0
