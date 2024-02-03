@@ -1,19 +1,19 @@
 ---
- - hosts: all
-   tasks:
-
-    - name: Get disk facts 
+- hosts: all
+  tasks:
+    - name: Get disk facts
       win_shell: |
         Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, @{Name="Size(GB)";Expression={[math]::round($_.Size / 1GB, 2)}}, 
         @{Name="FreeSpace(GB)";Expression={[math]::round($_.FreeSpace / 1GB, 2)}}
+      # Removed register as it's not used later, but you might want to keep it if you plan to use the output
 
     - name: Check disk usage
       win_shell: |
         $threshold = 20
-        $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq "3"}  
+        $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3}  
         $results = @()
-        foreach($disk in $disks) {
-          $percent = [int](($disk.Size - $disk.Freespace) / $disk.Size * 100)
+        foreach ($disk in $disks) {
+          $percent = [math]::Round(($disk.Size - $disk.FreeSpace) / $disk.Size * 100, 2)
           if ($percent -ge $threshold) {
             $props = @{
               Device = $disk.DeviceID   
@@ -22,28 +22,35 @@
             $results += New-Object -TypeName PSObject -Property $props
           }
         }
-        $results | Format-Table Device,UsedPercent -AutoSize
+        $results | Format-Table -AutoSize | Out-String -Width 4096
       register: disk_usage
 
-    - name: Display disk usage  
+    - name: Display disk usage
       debug:
         var: disk_usage.stdout_lines
-    
-     - name: Get largest files
-       win_shell: |
-          $threshold = 20
-          $count = 15
-          $results = @() 
-          Get-WmiObject Win32_LogicalDisk | ForEach-Object {   
-            $deviceId = $_.DeviceID
-            $percent = [int](($_.Size - $_.Freespace) / $_.Size * 100)  
-            if ($percent -ge $threshold) {
-              $largeFiles = Get-ChildItem -Path $deviceId -Recurse -File | Sort-Object -Property Length -Descending | Select-Object -First $count @{Name="FullName";Expression={$_.FullName}},  
-              @{Name="Size(GB)";Expression={[math]::round($_.Length / 1GB, 2)}}, LastWriteTime
-              $results += $largeFiles
-            }
-          }
-          $results | Format-Table FullName,Size(GB),LastWriteTime -AutoSize | Out-File -FilePath C:\largest_files.txt
 
-      - name: Display largest files
-        win_shell: Get-Content -Path C:\largest_files.txt
+    - name: Get largest files
+      win_shell: |
+        $threshold = 20
+        $count = 15
+        $results = @() 
+        $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3}
+        foreach ($disk in $disks) {
+          $deviceId = $disk.DeviceID
+          $percent = [math]::Round(($disk.Size - $disk.FreeSpace) / $disk.Size * 100, 2) 
+          if ($percent -ge $threshold) {
+            $largeFiles = Get-ChildItem -Path $deviceId -Recurse -File -ErrorAction SilentlyContinue | Sort-Object -Property Length -Descending | Select-Object -First $count @{Name="FullName";Expression={$_.FullName}},  
+            @{Name="Size(GB)";Expression={[math]::round($_.Length / 1GB, 2)}}, LastWriteTime
+            $results += $largeFiles
+          }
+        }
+        $results | Format-Table -AutoSize | Out-String -Width 4096 | Out-File -FilePath C:\largest_files.txt
+      # Added ErrorAction SilentlyContinue to avoid errors in inaccessible paths
+
+    - name: Display largest files
+      win_shell: Get-Content -Path C:\largest_files.txt
+      register: largest_files_output  # Registering output to display it
+
+    - name: Output largest files content
+      debug:
+        var: largest_files_output.stdout_lines
