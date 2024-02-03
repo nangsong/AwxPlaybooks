@@ -1,34 +1,33 @@
-- hosts: all 
-  gather_facts: no
+-- hosts: all
+   tasks:
 
-  tasks:
-    - name: Get disk facts
-      win_partition:
-        drive_letter: C
-      register: disk_facts
-
-    - name: Check disk usage  
+    - name: Get disk facts 
       win_shell: |
-        $threshold = 20
-        $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq "3"}
+        Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, @{Name="Size(GB)";Expression={[math]::round($_.Size / 1GB, 2)}}, 
+        @{Name="FreeSpace(GB)";Expression={[math]::round($_.FreeSpace / 1GB, 2)}}
+
+    - name: Check disk usage
+      win_shell: |
+        $threshold = 80
+        $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq "3"}  
         $results = @()
         foreach($disk in $disks) {
           $percent = [int](($disk.Size - $disk.Freespace) / $disk.Size * 100)
           if ($percent -ge $threshold) {
             $props = @{
-              Device = $disk.DeviceID  
+              Device = $disk.DeviceID   
               UsedPercent = $percent
             }
             $results += New-Object -TypeName PSObject -Property $props
-          } 
+          }
         }
         $results | Format-Table Device,UsedPercent -AutoSize
       register: disk_usage
 
-    - name: Display disk usage
+    - name: Display disk usage  
       debug:
         var: disk_usage.stdout_lines
-
+    
     - name: Get largest files
       win_shell: |
         $threshold = 20
