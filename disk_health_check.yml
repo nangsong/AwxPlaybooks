@@ -1,40 +1,38 @@
----
-- name: Windows Server Disk Health Check
-  hosts: all
-  gather_facts: no
+- hosts: all
   tasks:
-    - name: Gather disk facts
+    - name: Get disk usage facts  
       win_disk_facts:
-      register: disk_facts
 
-    - name: Determine disks with 80% or more usage
-      set_fact:
-        high_usage_disks: "{{ high_usage_disks | default([]) + [item.key] }}"
-      loop: "{{ disk_facts.ansible_facts.disks | dict2items }}"
-      when: 'item.value.size_used / item.value.size_total >= 0.8'
+    - name: Check disk usage
+      win_shell: | 
+        $threshold = 20
+        $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq "3"}  
+        $results = @()
+        foreach ($disk in $disks) {
+          $percent = [int]($disk.FreeSpace/$disk.Size*100)   
+          if ($percent -le $threshold) {
+            $props = @{
+              Device = $disk.DeviceID
+              PercentFree = $percent 
+            }
+            $results += New-Object -TypeName PSObject -Property $props
+          }
+        }
+        $results | Format-Table Device,PercentFree -AutoSize
+      register: disk_space
 
-    - name: Display disks with 80% or more usage in tabular form
-      debug:
-        msg: "{{ inventory_hostname }}: {{ high_usage_disks }}"
-      when: high_usage_disks | default([]) | length > 0
-
-    - name: Find the 15 largest files on high usage disks
+    - name: Create file with 15 largest files 
       win_shell: |
-        Get-ChildItem -Path '{{ item }}' -Recurse -File | 
-        Sort-Object Length -Descending | 
-        Select-Object -First 15 | 
-        Select-Object FullName, @{Name="SizeInMB";Expression={$_.Length / 1MB}} | 
-        Format-Table -AutoSize | 
-        Out-String -Width 4096
-      register: largest_files
-      loop: "{{ high_usage_disks }}"
-      ignore_errors: yes
-      when: high_usage_disks | default([]) | length > 0
-
-    - name: Create a text file on C drive listing the 15 largest files
-      win_lineinfile:
-        path: C:\disk_health_check\largest_files_{{ inventory_hostname }}.txt
-        line: "{{ item.stdout }}"
-        create: yes
-      loop: "{{ largest_files.results }}"
-      when: largest_files.results | length > 0
+        $threshold = 20
+        $count = 15
+        $results = @()
+        Get-WmiObject Win32_LogicalDisk | ForEach-Object {
+          $deviceId = $_.DeviceID  
+          $percent = [int]($_.FreeSpace/$_.Size*100)
+          if ($percent -le $threshold) {
+            $largeFiles = Get-ChildItem -Path $deviceId -Recurse -File | Sort-Object -Property Length -Descending | Select-Object -First $count FullName,Length,LastWriteTime
+            $results += $largeFiles
+          }
+        }
+        $results | Out-File -FilePath C:\largest-files.txt
+      when: disk_space.stdout_lines | length > 0
