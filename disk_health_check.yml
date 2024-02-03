@@ -1,38 +1,46 @@
-- hosts: all
+---
+- name: Windows Server Disk Health Check
+  hosts: all
+  gather_facts: no
   tasks:
-    - name: Get disk usage facts  
-      win_disk_facts:
-
-    - name: Check disk usage
-      win_shell: | 
-        $threshold = 20
-        $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq "3"}  
-        $results = @()
-        foreach ($disk in $disks) {
-          $percent = [int]($disk.FreeSpace/$disk.Size*100)   
-          if ($percent -le $threshold) {
-            $props = @{
-              Device = $disk.DeviceID
-              PercentFree = $percent 
-            }
-            $results += New-Object -TypeName PSObject -Property $props
-          }
-        }
-        $results | Format-Table Device,PercentFree -AutoSize
-      register: disk_space
-
-    - name: Create file with 15 largest files 
+    - name: Get disk usage info
       win_shell: |
-        $threshold = 20
-        $count = 15
-        $results = @()
-        Get-WmiObject Win32_LogicalDisk | ForEach-Object {
-          $deviceId = $_.DeviceID  
-          $percent = [int]($_.FreeSpace/$_.Size*100)
-          if ($percent -le $threshold) {
-            $largeFiles = Get-ChildItem -Path $deviceId -Recurse -File | Sort-Object -Property Length -Descending | Select-Object -First $count FullName,Length,LastWriteTime
-            $results += $largeFiles
-          }
+        Get-PSDrive -PSProvider FileSystem |
+        Select-Object Name, @{Name="Used";Expression={($_.Used / 1GB -as [int])}},
+        @{Name="Free";Expression={($_.Free / 1GB -as [int])}},
+        @{Name="Total";Expression={($_.Used + $_.Free) / 1GB -as [int]}} |
+        Where-Object {$_.Used -ne $null} |
+        Sort-Object Name |
+        Format-Table -AutoSize |
+        Out-String -Width 4096
+      register: disk_usage
+
+    - name: Display disk usage
+      debug:
+        var: disk_usage.stdout
+
+    - name: Find and list the 15 largest files for drives with high usage
+      win_shell: |
+        $drives = Get-PSDrive -PSProvider FileSystem | Where-Object { ($_.Used / ($_.Used + $_.Free)) -ge 0.2 }
+        foreach ($drive in $drives) {
+            $path = $drive.Root
+            Get-ChildItem -Path $path -Recurse -File -ErrorAction SilentlyContinue |
+            Sort-Object Length -Descending |
+            Select-Object -First 15 |
+            Select-Object FullName, @{Name="SizeInMB";Expression={$_.Length / 1MB -as [int]}} |
+            Format-Table -AutoSize |
+            Out-String -Width 4096
         }
-        $results | Out-File -FilePath C:\largest-files.txt
-      when: disk_space.stdout_lines | length > 0
+      register: large_files_info
+      ignore_errors: yes
+
+    - name: Display the 15 largest files info
+      debug:
+        var: large_files_info.stdout
+
+    - name: Create a text file on C: drive listing the 15 largest files (Example for one host)
+      win_lineinfile:
+        path: C:\disk_health_check\largest_files_info.txt
+        line: "{{ large_files_info.stdout }}"
+        create: yes
+      when: large_files_info.stdout | length > 0
