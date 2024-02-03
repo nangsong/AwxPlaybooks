@@ -31,7 +31,7 @@
       ignore_errors: yes
       when: high_usage_disks | default([]) | length > 0
 
-    - name: Create a text file on C: drive listing the 15 largest files
+    - name: Create a text file on C drive listing the 15 largest files
       win_lineinfile:
         path: C:\disk_health_check\largest_files_{{ inventory_hostname }}.txt
         line: "{{ item.stdout }}"
