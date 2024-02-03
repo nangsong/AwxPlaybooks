@@ -29,19 +29,21 @@
       debug:
         var: disk_usage.stdout_lines
     
-    - name: Get largest files
-      win_shell: |
-        $threshold = 20
-        $count = 15
-        $results = @() 
-        Get-WmiObject Win32_LogicalDisk | ForEach-Object {  
-          $deviceId = $_.DeviceID
-          $percent = [int](($_.Size - $_.Freespace) / $_.Size * 100)  
-          if ($percent -ge $threshold) {
-            $largeFiles = Get-ChildItem -Path $deviceId -Recurse -File | Sort-Object -Property Length -Descending | Select-Object -First $count FullName,Length,LastWriteTime
-            $results += $largeFiles  
+     - name: Get largest files
+       win_shell: |
+          $threshold = 20
+          $count = 15
+          $results = @() 
+          Get-WmiObject Win32_LogicalDisk | ForEach-Object {   
+            $deviceId = $_.DeviceID
+            $percent = [int](($_.Size - $_.Freespace) / $_.Size * 100)  
+            if ($percent -ge $threshold) {
+              $largeFiles = Get-ChildItem -Path $deviceId -Recurse -File | Sort-Object -Property Length -Descending | Select-Object -First $count @{Name="FullName";Expression={$_.FullName}},  
+              @{Name="Size(GB)";Expression={[math]::round($_.Length / 1GB, 2)}}, LastWriteTime
+              $results += $largeFiles
+            }
           }
-        }
-        $results | Out-File -FilePath C:\largest_files.txt 
-    - name: Display largest files  
-      win_shell: Get-Content -Path C:\largest_files.txt
+          $results | Format-Table FullName,Size(GB),LastWriteTime -AutoSize | Out-File -FilePath C:\largest_files.txt
+
+      - name: Display largest files
+        win_shell: Get-Content -Path C:\largest_files.txt
