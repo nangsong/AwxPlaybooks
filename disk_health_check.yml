@@ -38,7 +38,7 @@
       debug:
         var: large_files_info.stdout
 
-    - name: Create a text file on C: drive listing the 15 largest files (Example for one host)
+    - name: Create a text file on C drive listing the 15 largest files (Example for one host)
       win_lineinfile:
         path: C:\disk_health_check\largest_files_info.txt
         line: "{{ large_files_info.stdout }}"
