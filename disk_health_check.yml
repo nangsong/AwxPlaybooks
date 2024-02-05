@@ -3,7 +3,7 @@
   tasks:
     - name: Check disk usage
       win_shell: |
-        $threshold = 20
+        $threshold = 80
         $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3}  
         $results = @()
         $flag = $false
@@ -34,7 +34,7 @@
       block:
         - name: Get largest files
           win_shell: |
-            $threshold = 20
+            $threshold = 80
             $count = 15
             $results = @() 
             $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3}
