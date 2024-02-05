@@ -1,0 +1,16 @@
+---
+- name: Check and restart Windows service
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Check service status on the Windows host
+      ansible.windows.win_service:
+        name: "{{ service_name }}"
+      register: service_status
+
+    - name: Restart the service if it is stopped
+      ansible.windows.win_service:
+        name: "{{ service_name }}"
+        state: restarted
+      when: service_status.state == 'stopped'
