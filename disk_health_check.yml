@@ -1,17 +1,12 @@
 ---
 - hosts: all
   tasks:
-    - name: Get disk facts
-      win_shell: |
-        Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, @{Name="Size(GB)";Expression={[math]::round($_.Size / 1GB, 2)}}, 
-        @{Name="FreeSpace(GB)";Expression={[math]::round($_.FreeSpace / 1GB, 2)}}
-      # Removed register as it's not used later, but you might want to keep it if you plan to use the output
-
     - name: Check disk usage
       win_shell: |
         $threshold = 20
         $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3}  
         $results = @()
+        $flag = $false
         foreach ($disk in $disks) {
           $percent = [math]::Round(($disk.Size - $disk.FreeSpace) / $disk.Size * 100, 2)
           if ($percent -ge $threshold) {
@@ -20,37 +15,45 @@
               UsedPercent = $percent
             }
             $results += New-Object -TypeName PSObject -Property $props
+            $flag = $true
           }
         }
-        $results | Format-Table -AutoSize | Out-String -Width 4096
+        if ($flag) {
+          $results | Format-Table -AutoSize | Out-String -Width 4096
+        } else {
+          Write-Output "No disk usage above threshold."
+        }
       register: disk_usage
+      changed_when: "'No disk usage above threshold.' not in disk_usage.stdout"
 
-    - name: Display disk usage
-      debug:
-        var: disk_usage.stdout_lines
+    - name: Set flag for high disk usage
+      set_fact:
+        high_disk_usage: "{{ 'No disk usage above threshold.' not in disk_usage.stdout }}"
+    
+    - name: Get and display largest files only if high disk usage is detected
+      block:
+        - name: Get largest files
+          win_shell: |
+            $threshold = 20
+            $count = 15
+            $results = @() 
+            $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3}
+            foreach ($disk in $disks) {
+              $deviceId = $disk.DeviceID
+              $percent = [math]::Round(($disk.Size - $disk.FreeSpace) / $disk.Size * 100, 2) 
+              if ($percent -ge $threshold) {
+                $largeFiles = Get-ChildItem -Path $deviceId -Recurse -File -ErrorAction SilentlyContinue | Sort-Object -Property Length -Descending | Select-Object -First $count @{Name="FullName";Expression={$_.FullName}},  
+                @{Name="Size(GB)";Expression={[math]::round($_.Length / 1GB, 2)}}, LastWriteTime
+                $results += $largeFiles
+              }
+            }
+            $results | Format-Table -AutoSize | Out-String -Width 4096 | Out-File -FilePath C:\largest_files.txt
 
-    - name: Get largest files
-      win_shell: |
-        $threshold = 20
-        $count = 15
-        $results = @() 
-        $disks = Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3}
-        foreach ($disk in $disks) {
-          $deviceId = $disk.DeviceID
-          $percent = [math]::Round(($disk.Size - $disk.FreeSpace) / $disk.Size * 100, 2) 
-          if ($percent -ge $threshold) {
-            $largeFiles = Get-ChildItem -Path $deviceId -Recurse -File -ErrorAction SilentlyContinue | Sort-Object -Property Length -Descending | Select-Object -First $count @{Name="FullName";Expression={$_.FullName}},  
-            @{Name="Size(GB)";Expression={[math]::round($_.Length / 1GB, 2)}}, LastWriteTime
-            $results += $largeFiles
-          }
-        }
-        $results | Format-Table -AutoSize | Out-String -Width 4096 | Out-File -FilePath C:\largest_files.txt
-      # Added ErrorAction SilentlyContinue to avoid errors in inaccessible paths
+        - name: Display largest files
+          win_shell: Get-Content -Path C:\largest_files.txt
+          register: largest_files_output
 
-    - name: Display largest files
-      win_shell: Get-Content -Path C:\largest_files.txt
-      register: largest_files_output  # Registering output to display it
-
-    - name: Output largest files content
-      debug:
-        var: largest_files_output.stdout_lines
+        - name: Output largest files content
+          debug:
+            var: largest_files_output.stdout_lines
+      when: high_disk_usage
