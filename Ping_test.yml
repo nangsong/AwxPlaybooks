@@ -1,6 +1,6 @@
 ---
 - name: Test Kerberos Authentication
-  hosts: all
+  hosts: "{{  hostnames }}"
   gather_facts: false
   tasks:
 
