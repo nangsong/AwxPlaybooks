@@ -7,9 +7,9 @@
         product_id: 7-Zip
         arguments: /S
         state: present
-  become: true
-  become_method: runas
-  become_flags: logon_type=new_credential logon_flags=netcredentials_only
-  vars:
-    ansible_become_user: "{{ username }}"
-    ansible_become_password: "{{ password }}"
+      become: true
+      become_method: runas
+      become_flags: logon_type=new_credential logon_flags=netcredentials_only
+      vars:
+        ansible_become_user: "{{ username }}"
+        ansible_become_password: "{{ password }}"
