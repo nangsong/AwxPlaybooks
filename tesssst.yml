@@ -1,7 +1,9 @@
 - hosts: "{{ hostnames }}"
+  collections:
+    - chocolatey.chocolatey
   tasks:
    - name: Install notepadplusplus version 6.6
      win_chocolatey:
-      name: notepadplusplus
-      state: present
+      name: "{{ package_name }}"
+      state: :{{ app_state }}
       
