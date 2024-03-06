@@ -6,15 +6,19 @@
     connection_results: []
   tasks:
     - name: Connectivity Test - Ping
-      ansible.windows.win_ping:
-      register: ping_Result
-      failed_when: ping_Result.ping != 'pong'
+      ping:
+      register: ping_result  # Store the result for later
 
-    - name: Capturing ping global results
+    - name: Determine Host Status
       set_fact:
-        connection_results: "{{ connection_results + [{ 'Host': inventory_hostname, 'Status': 'RESPONSIVE' if ping_Result.unreachable == true else 'NOT-RESPONSIVE' }] }}"
-      delegate_to: DC  
+        host_status: "NO-RESPONSIVE"  # Default to unresponsive
+      when: ping_result.unreachable == true
 
-    - name: Display Ping result
+    - name: Determine Host Status (Responsive)
+      set_fact:
+        host_status: "RESPONSIVE"
+      when: ping_result.unreachable == false
+
+    - name: Display Host Status
       debug:
-        var: connection_results
+        msg: "Host {{ inventory_hostname }} Status: {{ host_status }}"
