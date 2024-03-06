@@ -25,7 +25,7 @@
 
     - name: Construct report
       set_fact:
-        report_content: "{{ report_content + [{ 'Host': disk_usage_result.output.ServerName,'Usage': disk_usage_result.output.DiskUsage, 'Status': 'HEALTHY' if disk_usage_result.output.DiskUsage <= 80 else 'ACTION NEEDED' }] }}"
+        report_content: "{{ report_content + [{ 'Host': disk_usage_result.output.ServerName}] }}"
       delegate_to: DC
 
     - name: Generating Report file
