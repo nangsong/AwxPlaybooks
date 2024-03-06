@@ -32,3 +32,4 @@
       ansible.windows.win_template:
           src: disk_report.txt.j2
           dest: C:\myDiskReport.txt
+      delegate_to: DC
