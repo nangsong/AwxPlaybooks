@@ -1,6 +1,6 @@
 ---
 - name: Test Kerberos Authentication
-  hosts: windows_Host
+  hosts: winds
   gather_facts: false
   tasks:
 
