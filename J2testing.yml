@@ -14,7 +14,7 @@
   gather_facts: false
   tasks:
     - name: testing connectivity
-      ansible.windows.ping:
+      ansible.windows.win_ping:
 
     - name: Bilding the j2 template
       ansible.windows.template:
