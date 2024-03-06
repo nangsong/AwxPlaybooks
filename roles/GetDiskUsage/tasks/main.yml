@@ -11,4 +11,4 @@
 
 - name: Display Dusage value
   debug:
-    var: Dusage.stdout_lines[0]
+    var: Dusage.output[0]
