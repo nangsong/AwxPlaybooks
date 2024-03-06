@@ -6,17 +6,12 @@
       $total = $disk.Size
       $free = $disk.FreeSpace
       $usage = [math]::Round((($total - $free) / $total) * 100, 2)
-      $report = @{
-        ServerName = $env:COMPUTERNAME
-        DiskUsage = $usage
-      }
-      $report
+      $usage
   register: disk_result
 
 - name: Display Disk Usage
   debug:
-    var: disk_result.output.DiskUsage
-
+    var: disk_result.output
 
 
 
