@@ -14,7 +14,7 @@
     var: Dusage.output[0]
 
 - name: Building the temlate
-  set_facts:
+  set_fact:
     report_content: "{{ report_content +[{'Host': inventory_hostname,'Usage':Dusage.output[0] }] }}"
 
 - name: display report value
