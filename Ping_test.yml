@@ -1,8 +1,10 @@
 ---
 - name: Test Kerberos Authentication
-  hosts: "{{  hostnames }}"
+  hosts: windows_Host
   gather_facts: false
   tasks:
 
-    - name: Ensure windows host is reachable
+    - name: Connectivity Test - Ping
       ansible.windows.win_ping:
+      register: ping_Result
+
