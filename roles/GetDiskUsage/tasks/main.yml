@@ -17,8 +17,12 @@
   set_facts:
     report_content: "{{ report_content +[{'Host': inventory_hostname,'Usage':Dusage.output[0] }] }}"
 
+- name: display report value
+  debug:
+    var: report_content
+
 - name: Creating local File
   ansible.windows.win_template:
     src: disk_report.txt.j2
-    dest: "{{ C:\{{ inventory_hostname }}_disk_report.txt }}"
-  delegate_to: DC
+    dest: C:\disk_repo.txt
+  
