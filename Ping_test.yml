@@ -1,10 +1,18 @@
 ---
-- name: Test Kerberos Authentication
+- name: Testing Connectivity
   hosts: Winds
-  gather_facts: false
+  gather_facts: false  
+  vars:
+    connection_results: []
   tasks:
-
     - name: Connectivity Test - Ping
       ansible.windows.win_ping:
       register: ping_Result
 
+    - name: Capturing ping global results
+      set_facts:
+        connection_results: "{{ connection_results + [{ 'Host': inventory_hostname, 'Status': 'RESPONSIVE' if ping_Result.ping =='pong' else 'NOT-RESPONSIVE' }] }}"
+
+    - name: Display Ping result
+      debug:
+        var: connection_results
