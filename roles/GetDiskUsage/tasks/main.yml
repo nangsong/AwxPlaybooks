@@ -17,7 +17,7 @@
   run_once: yes
 
 - name: Save C Drive Facts to Text File
-  lineinfile:
+  win_lineinfile:
     path: C:\drive_capacity.txt
     line: "Host: {{ inventory_hostname }} | C Drive Capacity: {{ disk_facts_result.output }}"
-  delegate_to: localhost
+  delegate_to: DC
