@@ -16,20 +16,9 @@
             ServerName = $env:COMPUTERNAME
             DiskUsage = $usage
           }
-          $report | ConvertTo-Json
+          $report
       register: disk_usage_result
 
     - name: Display Disk Usage Report
       debug:
         var: disk_usage_result.output
-
-    - name: Construct report
-      set_fact:
-        report_content: "{{ report_content + [{ 'Host': disk_usage_result.output.ServerName,'Usage': disk_usage_result.output.DiskUsage, 'Status': 'HEALTHY' if (disk_usage_result.output.DiskUsage) <= 80 else 'ACTION NEEDED' }] }}"
-      delegate_to: DC
-
-    - name: Generating Report file
-      ansible.windows.win_template:
-        src: disk_report.txt.j2
-        dest: C:\myDiskReport.txt
-      delegate_to: DC
