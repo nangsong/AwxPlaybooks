@@ -1,24 +1,23 @@
 ---
-- name: Testing Connectivity
+- name: Connectivity Test
   hosts: Winds
-  gather_facts: false  
-  vars:
-    connection_results: []
+  gather_facts: false
+
   tasks:
     - name: Connectivity Test - Ping
       ping:
-      register: ping_result  # Store the result for later
 
-    - name: Determine Host Status
+    - name: Capturing ping global results
       set_fact:
-        host_status: "NO-RESPONSIVE"  # Default to unresponsive
-      when: ping_result.unreachable == true
+        connection_results: "{{ connection_results | default([]) + [{'Host': inventory_hostname, 'Status': 'RESPONSIVE'}] }}"
+      when: "'unreachable' not in hostvars[inventory_hostname]"
 
-    - name: Determine Host Status (Responsive)
+    - name: Set 'NO-RESPONSIVE' status for unreachable hosts
       set_fact:
-        host_status: "RESPONSIVE"
-      when: ping_result.unreachable == false
+        connection_results: "{{ connection_results | default([]) + [{'Host': item, 'Status': 'NO-RESPONSIVE'}] }}"
+      with_items: "{{ groups['Winds'] }}"
+      when: "'unreachable' in hostvars[item]"
 
-    - name: Display Host Status
+    - name: Display Ping result
       debug:
-        msg: "Host {{ inventory_hostname }} Status: {{ host_status }}"
+        var: connection_results
