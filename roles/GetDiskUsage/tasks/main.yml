@@ -1,7 +1,7 @@
 ---
 - name: Add Value to Variable
-    set_fact:
-      my_variable: "{{ my_variable + ['value1'] }}"
+  set_fact:
+    my_variable: "{{ my_variable + ['value1'] }}"
 
 - name: Display Variable
   debug:
