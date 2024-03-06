@@ -18,7 +18,7 @@
 
     - name: Bilding the j2 template
       ansible.windows.win_template:
-        src: templates/test.txt.j2
+        src: test.txt.j2
         dest: C:\mytestj2.txt
       delegate_to: DC
      
