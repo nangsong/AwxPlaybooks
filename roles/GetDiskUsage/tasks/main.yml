@@ -1,27 +1,26 @@
 ---
-- name: Get Disk Usage
-  ansible.windows.win_powershell:
-    script: |
-      $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'" | Select-Object Size, FreeSpace
-      $total = $disk.Size
-      $free = $disk.FreeSpace
-      $usage = [math]::Round((($total - $free) / $total) * 100, 2)
-      $usage
-  register: disk_result
+- name: Progressive Addition of Values
+  hosts: localhost
+  gather_facts: false
+  vars:
+    my_variable: []
 
-- name: Display Disk Usage
-  debug:
-    var: disk_result.output
+  tasks:
+    - name: Add Value to Variable
+      set_fact:
+        my_variable: "{{ my_variable + ['value1'] }}"
 
-- name: Display content
-  set_fact:
-    report_content: "{{report_content + disk_result.output}}"
+    - name: Display Variable
+      debug:
+        var: my_variable
 
-- name: Display content
-  debug:
-    var: report_content
-  delegate_to: DC
-  run_once: yes
+    - name: Add Another Value
+      set_fact:
+        my_variable: "{{ my_variable + ['value2'] }}"
+
+    - name: Display Updated Variable
+      debug:
+        var: my_variable
 
 
 
