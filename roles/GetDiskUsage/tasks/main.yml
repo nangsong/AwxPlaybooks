@@ -21,10 +21,11 @@
   set_fact:
     report_content: "{{ report_content + disk_result.output }}"
   delegate_to: DC
+  register: vallll
 
 - name: display resultt of content
   debug:
-    var: report_content
+    var: vallll
   delegate_to: DC
   run_once: true
 
