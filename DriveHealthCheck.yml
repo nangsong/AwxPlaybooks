@@ -2,23 +2,7 @@
 - name: Check Disk Usage on Windows Server
   hosts: Winds
   gather_facts: true
-  vars:
-    report_content: []
-  tasks:
-    - name: Get Disk Usage
-      ansible.windows.win_powershell:
-        script: |
-          $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'" | Select-Object Size, FreeSpace
-          $total = $disk.Size
-          $free = $disk.FreeSpace
-          $usage = [math]::Round((($total - $free) / $total) * 100, 2)
-          $report = @{
-            ServerName = $env:COMPUTERNAME
-            DiskUsage = $usage
-          }
-          $report
-      register: disk_usage_result
+  roles:
+      - GetDiskUsage
 
-    - name: Display Disk Usage Report
-      debug:
-        var: disk_usage_result.output
+
