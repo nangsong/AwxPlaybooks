@@ -22,4 +22,10 @@
     report_content: "{{ report_content + disk_result.output }}"
   delegate_to: DC
 
+- name: display resultt of content
+  debug:
+    var: report_content
+  delegate_to: DC
+  run_once: true
+
 
