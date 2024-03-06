@@ -1,6 +1,6 @@
 ######################## - Disk Report - ########################
-{% for host in groups['all'] %}
+{% for host in ansible_play_hosts %}
 
-{{loop.index}} - {{ report.Host }} - {{ report.Usage}} - {{ Report.Status}}
+{{loop.index}} - {{ report_content.Host }} - {{ report_content.Usage}} 
 
 ######################## - Disk Report - ########################
