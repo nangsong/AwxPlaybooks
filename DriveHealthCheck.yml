@@ -2,6 +2,8 @@
 - name: Check Disk Usage on Windows Server
   hosts: Winds
   gather_facts: true
+  vars:
+    report_content
   tasks:
     - name: Get Disk Usage
       ansible.windows.win_powershell:
@@ -9,7 +11,7 @@
           $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'" | Select-Object Size, FreeSpace
           $total = $disk.Size
           $free = $disk.FreeSpace
-          $usage = (($total - $free) / $total) * 100
+          $usage = [math]::Round((($total - $free) / $total) * 100, 2)
           $report = New-Object PSObject -Property @{
             ServerName = $env:COMPUTERNAME
             DiskUsage = $usage
@@ -21,15 +23,12 @@
       debug:
         var: disk_usage_result.output
 
-    - name: Create Report File
-      ansible.windows.win_powershell:
-        script: |
-          $report = "{{ disk_usage_result.output }}"
-          if ($report.DiskUsage -lt 80) {
-            $status = "Healthy"
-          } else {
-            $status = "Action Needed"
-          }
-          $reportString = "Server Name: $($report.ServerName)`r`nDisk Usage: $($report.DiskUsage)%`r`nStatus: $status"
-          Set-Content -Path "C:\Disk_Report.txt" -Value $reportString
+    - name: Construct report
+      set_fact:
+        report_content: "{{ report_content | default([]) + [{ 'Host': disk_usage_result.output.ServerName,'Usage': disk_usage_result.output.DiskUsage, 'Status': 'HEALTHY' if disk_usage_result.output.DiskUsage <= 80 else 'ACTION NEEDED' }] }}"
       delegate_to: DC
+
+    - name: Generating Report file
+      ansible.windows.win_template:
+          src: disk_report.txt.j2
+          dest: C:\myDiskReport.txt
