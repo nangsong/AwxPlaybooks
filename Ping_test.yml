@@ -5,12 +5,13 @@
 
   tasks:
     - name: Connectivity Test - Ping
+      ignore_errors: yes
       ping:
 
     - name: Capturing ping global results
       set_fact:
         connection_results: "{{ connection_results | default([]) + [{'Host': inventory_hostname, 'Status': 'RESPONSIVE'}] }}"
-      when: "'unreachable' not in hostvars[inventory_hostname]"
+      when: "'unreachable' not in hostvars[inventory_hostname] and 'FAILED!' not in task_result.stderr"
 
     - name: Set 'NO-RESPONSIVE' status for unreachable hosts
       set_fact:
