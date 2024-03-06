@@ -6,6 +6,10 @@
       $total = $disk.Size
       $free = $disk.FreeSpace
       $usage = [math]::Round((($total - $free) / $total) * 100, 2)
+      $total = [math]::Round($total, 2)
+      $free = [math]::Round($free, 2)
+      
+
       @{
         total = $total
         free = $free
