@@ -12,7 +12,7 @@
 
     - name: Capturing ping global results
       set_fact:
-        connection_results: "{{ connection_results + [{ 'Host': inventory_hostname, 'Status': 'RESPONSIVE' if ping_Result is defined else 'NOT-RESPONSIVE' }] }}"
+        connection_results: "{{ connection_results + [{ 'Host': inventory_hostname, 'Status': 'RESPONSIVE' if ping_Result.unreachable == true else 'NOT-RESPONSIVE' }] }}"
       delegate_to: DC  
 
     - name: Display Ping result
