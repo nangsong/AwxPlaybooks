@@ -15,7 +15,7 @@
 
 - name: Building the temlate
   set_fact:
-    report_content: "{{ report_content +[{'Host': inventory_hostname,'Usage': Dusage.output[0],'Status': 'ACTION NEEDED' if Dusage.output[0] >= 20 else 'HEALTHY' }] }}"
+    report_content: "{{ report_content +[{'Host': inventory_hostname,'Usage': Dusage.output[0],'Status': 'ACTION NEEDED' if Dusage.output[0] >= 30 else 'HEALTHY' }] }}"
 
 - name: display report value
   debug:
