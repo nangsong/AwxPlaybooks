@@ -1,7 +1,7 @@
 ######################## - Disk Report - ########################
 {% for host in ansible_play_hosts %}
 {% for item in hostvars[host].report_content %}
-"{{loop.index}}" - "{{ item[0].Host }}" - "{{ item[0].Usage}}" 
+"{{loop.index}}" - "{{ item.Host }}" - "{{ item.Usage}}" 
 {% endfor %}
 {% endfor %}
 ######################## - Disk Report - ########################
