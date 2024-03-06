@@ -8,6 +8,7 @@
     - name: Connectivity Test - Ping
       ansible.windows.win_ping:
       register: ping_Result
+      failed_when: ping_Result.ping != 'pong'
 
     - name: Capturing ping global results
       set_fact:
