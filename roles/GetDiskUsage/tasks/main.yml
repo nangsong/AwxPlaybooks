@@ -12,5 +12,5 @@
 - name: Save C Drive Facts to Text File
   lineinfile:
     path: C:\drive_capacity.txt
-    line: "Host: {{ inventory_hostname }} | C Drive Capacity: {{ disk_facts_result.ansible_facts['output'] }}"
+    line: "Host: {{ inventory_hostname }} | C Drive Capacity: {{ disk_facts_result.ansible_facts.output }}"
   delegate_to: localhost
