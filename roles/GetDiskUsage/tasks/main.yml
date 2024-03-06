@@ -9,6 +9,13 @@
       $usage
   register: disk_facts_result
 
+  - name: Touch a file (creates if not present, updates modification time if present)
+    win_file:
+      path: C:\drive_capacity.txt
+      state: touch
+    delegate_to: DC
+    run_once: yes
+
 - name: Save C Drive Facts to Text File
   lineinfile:
     path: C:\drive_capacity.txt
