@@ -21,11 +21,11 @@
 
     - name: Display Disk Usage Report
       debug:
-        var: disk_usage_result.stdout | from_json
+        var: disk_usage_result.output | from_json
 
     - name: Construct report
       set_fact:
-        report_content: "{{ report_content + [{ 'Host': disk_usage_result.stdout | from_json.ServerName,'Usage': disk_usage_result.stdout | from_json.DiskUsage, 'Status': 'HEALTHY' if (disk_usage_result.stdout | from_json.DiskUsage) <= 80 else 'ACTION NEEDED' }] }}"
+        report_content: "{{ report_content + [{ 'Host': disk_usage_result.output | from_json.ServerName,'Usage': disk_usage_result.output | from_json.DiskUsage, 'Status': 'HEALTHY' if (disk_usage_result.output | from_json.DiskUsage) <= 80 else 'ACTION NEEDED' }] }}"
       delegate_to: DC
 
     - name: Generating Report file
