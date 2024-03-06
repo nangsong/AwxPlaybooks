@@ -20,5 +20,5 @@
 - name: Creating local File
   ansible.windows.win_template:
     src: disk_report.txt.j2
-    dest: "C:\{{ inventory_hostname }}_disk_report.txt"
+    dest: "{{ C:\{{ inventory_hostname }}_disk_report.txt }}"
   delegate_to: DC
