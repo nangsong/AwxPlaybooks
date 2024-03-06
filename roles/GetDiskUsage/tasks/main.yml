@@ -13,20 +13,10 @@
       $report
   register: disk_result
 
-#- name: Display Disk Usage
-#  debug:
- #   var: disk_result.output
-
-- name: build j2 templ
-  set_fact:
-    report_content: "{{ report_content + disk_result.output }}"
-  delegate_to: DC
-  register: vallll
-
-- name: display resultt of content
+- name: Display Disk Usage
   debug:
-    var: vallll
-  delegate_to: DC
-  run_once: true
+    var: disk_result.output.DiskUsage
+
+
 
 
