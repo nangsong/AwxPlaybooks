@@ -9,7 +9,6 @@
       $usage
   register: Dusage
 
-- name: Dispplay Dusage value
+- name: Display Dusage value
   debug:
-    var: Dusage
-
+    var: Dusage.stdout_lines[0]
