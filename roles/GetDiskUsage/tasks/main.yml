@@ -19,7 +19,7 @@
 
 - name: build j2 templ
   set_fact:
-    report_content: "{{ report_content | default([]) + disk_result.output[0] }}"
+    report_content: "{{ report_content | default([]) + disk_result.output[0] | dict2item }}"
   delegate_to: DC
 
 
