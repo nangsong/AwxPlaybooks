@@ -1,11 +1,16 @@
 ---
 - name: Collect C Drive Facts
-  ansible.windows.win_disk_facts:
-    drive_letter: C
+  ansible.windows.win_powershell:
+    script: |
+      $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'" | Select-Object Size, FreeSpace
+      $total = $disk.Size
+      $free = $disk.FreeSpace
+      $usage = [math]::Round((($total - $free) / $total) * 100, 2)
+      $usage
   register: disk_facts_result
 
 - name: Save C Drive Facts to Text File
   lineinfile:
     path: C:\drive_capacity.txt
-    line: "Host: {{ inventory_hostname }} | C Drive Capacity: {{ disk_facts_result.ansible_facts['ansible_devices']['c:']['size'] }}"
+    line: "Host: {{ inventory_hostname }} | C Drive Capacity: {{ disk_facts_result.ansible_facts['output'] }}"
   delegate_to: localhost
