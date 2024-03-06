@@ -1,19 +1,25 @@
 ---
-- name: Add Value to Variable
-  set_fact:
-    my_variable: "{{ my_variable + [inventory_hostname] }}"
+- name: Get Disk Usage
+  ansible.windows.win_powershell:
+    script: |
+      $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'" | Select-Object Size, FreeSpace
+      $total = $disk.Size
+      $free = $disk.FreeSpace
+      $usage = [math]::Round((($total - $free) / $total) * 100, 2)
+      $usage
+  register: usage
 
-- name: Display Variable
+- name: Display Disk Usage
   debug:
-    var: my_variable
+    var: usage
 
-- name: Add Another Value
+- name: Display content
   set_fact:
-    my_variable: "{{ my_variable + ['value2'] }}"
+    report_content: "{{report_content + [usage.output]}}"
+  delegate_to: DCy
 
-- name: Display Updated Variable
+- name: Building the template
   debug:
-    var: my_variable
-
-
-
+    var: report_content
+  delegate_to: DC
+  run_once: yes
