@@ -7,17 +7,9 @@
       $free = $disk.FreeSpace
       $usage = [math]::Round((($total - $free) / $total) * 100, 2)
       $usage
-  register: disk_facts_result
+  register: Dusage
 
-- name: Touch a file (creates if not present, updates modification time if present)
-  win_file:
-    path: C:\drive_capacity.txt
-    state: touch
-  delegate_to: DC
-  run_once: yes
+- name: Dispplay Dusage value
+  debug:
+    var: Dusage
 
-- name: Save C Drive Facts to Text File
-  win_lineinfile:
-    dest: C:\drive_capacity.txt
-    line: "Host: {{ inventory_hostname }} | C Drive Capacity: {{ disk_facts_result.output }}"
-  delegate_to: DC

@@ -18,6 +18,13 @@
         $usage
     register: disk_result
  
+  - name: Touch a file (creates if not present, updates modification time if present)
+    win_file:
+      path: C:\report.csv
+      state: touch
+    delegate_to: DC
+    run_once: yes
+
   - name: Save CSV headers
     ansible.builtin.lineinfile:
       dest: "{{ csv_path }}"

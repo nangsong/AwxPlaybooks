@@ -1,5 +1,5 @@
 ######################## - Disk Report - ########################
-{% for host in group[all] %}
+{% for host in groups['all'] %}
 
 {{loop.index}} - {{ report.Host }} - {{ report.Usage}} - {{ Report.Status}}
 
