@@ -19,5 +19,17 @@
   debug:
     var: Dusage.output[0]
 
+- name: Building the temlate
+  set_fact:
+    report_content: "{{ report_content +[{'Host': inventory_hostname,'Usage': Dusage.output[0],'total': Dusage.output[0].total,'free': Dusage.output[0].free,'Status': 'ACTION NEEDED' if Dusage.output[0] >= 30 else 'HEALTHY' }] }}"
 
-  
+- name: display report value
+  debug:
+    var: report_content
+
+- name: Creating local File
+  ansible.windows.win_template:
+    src: disk_report.txt.j2
+    dest: C:\Drive_C_report-{{ ansible_date_time.year }}{{ ansible_date_time.month }}{{ ansible_date_time.day }}-{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}{{ ansible_date_time.second}}.csv
+  delegate_to: DC
+  run_once: true 

@@ -1,6 +1,6 @@
-Hostname,Usage,Status
+Hostname,Total(GB),Free(GB),Pecentage Usage,Status
 {% for host in ansible_play_hosts %}
 {% for item in hostvars[host].report_content %}
-{{ item.Host }},{{ item.Usage}},{{ item.Status  }} 
+{{ item.Host }},{{ item.total }},{{ item.free }},{{ item.Usage }},{{ item.Status }} 
 {% endfor %}
 {% endfor %}
