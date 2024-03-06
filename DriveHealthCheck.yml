@@ -3,7 +3,7 @@
   hosts: Winds
   gather_facts: true
   vars:
-    my_variable: []
+    report_content: []
   roles:
       - GetDiskUsage
 
