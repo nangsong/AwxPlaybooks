@@ -12,24 +12,24 @@
           $total = $disk.Size
           $free = $disk.FreeSpace
           $usage = [math]::Round((($total - $free) / $total) * 100, 2)
-          $report = New-Object PSObject -Property @{
+          $report = @{
             ServerName = $env:COMPUTERNAME
             DiskUsage = $usage
           }
-          $report
+          $report | ConvertTo-Json
       register: disk_usage_result
 
     - name: Display Disk Usage Report
       debug:
-        var: disk_usage_result.output
+        var: disk_usage_result.stdout | from_json
 
     - name: Construct report
       set_fact:
-        report_content: "{{ report_content + [{ 'Host': disk_usage_result.output.ServerName}] }}"
+        report_content: "{{ report_content + [{ 'Host': disk_usage_result.stdout | from_json.ServerName,'Usage': disk_usage_result.stdout | from_json.DiskUsage, 'Status': 'HEALTHY' if (disk_usage_result.stdout | from_json.DiskUsage) <= 80 else 'ACTION NEEDED' }] }}"
       delegate_to: DC
 
     - name: Generating Report file
       ansible.windows.win_template:
-          src: disk_report.txt.j2
-          dest: C:\myDiskReport.txt
+        src: disk_report.txt.j2
+        dest: C:\myDiskReport.txt
       delegate_to: DC
