@@ -3,7 +3,7 @@
   hosts: Winds
   gather_facts: true
   vars:
-    report_content
+    report_content: []
   tasks:
     - name: Get Disk Usage
       ansible.windows.win_powershell:
@@ -25,7 +25,7 @@
 
     - name: Construct report
       set_fact:
-        report_content: "{{ report_content | default([]) + [{ 'Host': disk_usage_result.output.ServerName,'Usage': disk_usage_result.output.DiskUsage, 'Status': 'HEALTHY' if disk_usage_result.output.DiskUsage <= 80 else 'ACTION NEEDED' }] }}"
+        report_content: "{{ report_content + [{ 'Host': disk_usage_result.output.ServerName,'Usage': disk_usage_result.output.DiskUsage, 'Status': 'HEALTHY' if disk_usage_result.output.DiskUsage <= 80 else 'ACTION NEEDED' }] }}"
       delegate_to: DC
 
     - name: Generating Report file
