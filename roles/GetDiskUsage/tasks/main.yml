@@ -15,8 +15,8 @@
 
 - name: Display content
   set_fact:
-    report_content: "{{report_content + [usage.output]}}"
-  delegate_to: DCy
+    report_content: "{{report_content + [usage.output[0]]}}"
+  delegate_to: DC
 
 - name: Building the template
   debug:
