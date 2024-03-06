@@ -24,6 +24,7 @@
 - name: Creating local File
   ansible.windows.win_template:
     src: disk_report.txt.j2
-    dest: C:\disk_repo.txt
+    dest: C:\disk_repo-{{inventory_hostname}}.txt
   delegate_to: DC
+  run_once: true
   
