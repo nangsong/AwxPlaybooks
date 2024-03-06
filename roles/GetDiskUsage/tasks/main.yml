@@ -25,4 +25,5 @@
   ansible.windows.win_template:
     src: disk_report.txt.j2
     dest: C:\disk_repo.txt
+  delegate_to: DC
   
