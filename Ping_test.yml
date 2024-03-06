@@ -1,24 +1,10 @@
 ---
-- name: Connectivity Test
+- name: Testing Connectivity
   hosts: Winds
-  gather_facts: false
-
+  gather_facts: false 
+  ignore_errors: true 
   tasks:
     - name: Connectivity Test - Ping
-      ignore_errors: yes
-      ping:
-
-    - name: Capturing ping global results
-      set_fact:
-        connection_results: "{{ connection_results | default([]) + [{'Host': inventory_hostname, 'Status': 'RESPONSIVE'}] }}"
-      when: "'unreachable' not in hostvars[inventory_hostname] and 'FAILED!' not in task_result.stderr"
-
-    - name: Set 'NO-RESPONSIVE' status for unreachable hosts
-      set_fact:
-        connection_results: "{{ connection_results | default([]) + [{'Host': item, 'Status': 'NO-RESPONSIVE'}] }}"
-      with_items: "{{ groups['Winds'] }}"
-      when: "'unreachable' in hostvars[item]"
-
-    - name: Display Ping result
-      debug:
-        var: connection_results
+      ansible.windows.win_ping:
+      register: ping_Result
+ 
