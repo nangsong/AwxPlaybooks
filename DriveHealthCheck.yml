@@ -19,12 +19,12 @@
 
     - name: Display Disk Usage Report
       debug:
-        var: disk_usage_result.stdout_lines
+        var: disk_usage_result.output
 
     - name: Create Report File
       ansible.windows.win_powershell:
         script: |
-          $report = "{{ disk_usage_result.stdout }}"
+          $report = "{{ disk_usage_result.output }}"
           if ($report.DiskUsage -lt 80) {
             $status = "Healthy"
           } else {
