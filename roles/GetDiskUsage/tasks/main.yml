@@ -1,26 +1,19 @@
 ---
-- name: Progressive Addition of Values
-  hosts: localhost
-  gather_facts: false
-  vars:
-    my_variable: []
+- name: Add Value to Variable
+    set_fact:
+      my_variable: "{{ my_variable + ['value1'] }}"
 
-  tasks:
-    - name: Add Value to Variable
-      set_fact:
-        my_variable: "{{ my_variable + ['value1'] }}"
+- name: Display Variable
+  debug:
+    var: my_variable
 
-    - name: Display Variable
-      debug:
-        var: my_variable
+- name: Add Another Value
+  set_fact:
+    my_variable: "{{ my_variable + ['value2'] }}"
 
-    - name: Add Another Value
-      set_fact:
-        my_variable: "{{ my_variable + ['value2'] }}"
-
-    - name: Display Updated Variable
-      debug:
-        var: my_variable
+- name: Display Updated Variable
+  debug:
+    var: my_variable
 
 
 
