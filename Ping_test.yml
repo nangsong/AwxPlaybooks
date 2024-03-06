@@ -10,7 +10,7 @@
       register: ping_Result
 
     - name: Capturing ping global results
-      set_facts:
+      set_fact:
         connection_results: "{{ connection_results + [{ 'Host': inventory_hostname, 'Status': 'RESPONSIVE' if ping_Result.ping =='pong' else 'NOT-RESPONSIVE' }] }}"
 
     - name: Display Ping result
