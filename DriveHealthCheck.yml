@@ -2,7 +2,8 @@
 - name: Check Disk Usage on Windows Server
   hosts: Winds
   gather_facts: true
-  
+  vars:
+    report_content: []
   roles:
       - GetDiskUsage
 
