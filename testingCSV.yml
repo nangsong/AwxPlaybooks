@@ -35,10 +35,5 @@
       state: present
     delegate_to: DC
  
-  - name: Read in CSV to variable
-    community.general.read_csv:
-      path: "{{ csv_path }}"
-    register: csv_file
-    delegate_to: DC
-    run_once: true
+
  
