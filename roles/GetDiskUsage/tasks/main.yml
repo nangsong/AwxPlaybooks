@@ -13,5 +13,15 @@
   debug:
     var: disk_result.output
 
+- name: Display content
+  set_fact:
+    report_content: "{{report_content + disk_result.output}}"
+
+- name: Display content
+  debug:
+    var: report_content
+  delegate_to: DC
+  run_once: yes
+
 
 
