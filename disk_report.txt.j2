@@ -1,4 +1,4 @@
-Hostname,Total(GB),Free(GB),Pecentage Usage,Status
+Hostname,Total-GB,Free-GB,Pecentage Usage,Status
 {% for host in ansible_play_hosts %}
 {% for item in hostvars[host].report_content %}
 {{ item.Host }},{{ item.total }},{{ item.free }},{{ item.Usage }},{{ item.Status }} 
