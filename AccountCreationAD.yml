@@ -1,0 +1,6 @@
+---
+- name: AD Account Provisioning
+  hosts: all
+
+  roles:
+    - accountProvision

@@ -1,0 +1,31 @@
+---
+- name: Create Active Directory User
+  ansible.windows.win_powershell:
+    script: |
+      # Your PowerShell script goes here, with proper indentation
+      try {
+          # Generate a random password 
+          $password = -join (33..126 | Get-Random -Count 10 | % {[char]$_})
+
+          # Create user in Active Directory
+          $userParams = @{
+              SamAccountName        = "{{ userLogonName }}"
+              UserPrincipalName     = "$userLogonName@nshsoft.local"
+              GivenName             = "{{ firstName }}"
+              Surname               = "{{ lastName }}"
+              Name                  = "{{ userLogonName }}"
+              DisplayName           = "{{ userLogonName }}"
+              AccountPassword       = (ConvertTo-SecureString -String $password -AsPlainText -Force)
+              Enabled               = $true
+              PasswordNeverExpires  = $false
+              Path                  = "OU=Users,OU=NSHSOFT,DC=nshsoft,DC=local" 
+          }
+
+          New-ADUser @userParams
+          "User account created successfully:"
+          "User Logon Name: $userLogonName"
+          "Generated Password: $password"  
+
+      } catch {
+          "Error creating user account: $_" 
+      } 
