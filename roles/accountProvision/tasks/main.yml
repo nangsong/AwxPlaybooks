@@ -22,9 +22,9 @@
           }
 
           New-ADUser @userParams
-          User account created successfully
-          User Logon Name: {{ userLogonName }}
-          Generated Password: $password
+          'User account created successfully'
+          "User Logon Name: {{ userLogonName }}"
+          "Generated Password: $password"
 
       } catch {
           "Error creating user account: $_" 
