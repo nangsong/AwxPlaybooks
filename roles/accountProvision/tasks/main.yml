@@ -10,7 +10,7 @@
           # Create user in Active Directory
           $userParams = @{
               SamAccountName        = "{{ userLogonName }}"
-              UserPrincipalName     = "$userLogonName@nshsoft.local"
+              UserPrincipalName     = "{{ userLogonName }}@nshsoft.local"
               GivenName             = "{{ firstName }}"
               Surname               = "{{ lastName }}"
               Name                  = "{{ userLogonName }}"
