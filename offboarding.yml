@@ -1,0 +1,7 @@
+---
+- name: Offboarding Users
+  hosts: "{{ domainController }}"
+  gather_facts: no
+  
+  roles:
+    - Offboarding
