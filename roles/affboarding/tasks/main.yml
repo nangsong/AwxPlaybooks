@@ -26,4 +26,4 @@
   
 - name: Offoarding Result
   debug:
-    var: offboarding_result
+    var: offboarding_result.output
