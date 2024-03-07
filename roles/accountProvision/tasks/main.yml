@@ -23,7 +23,7 @@
 
           New-ADUser @userParams
           "User account created successfully:"
-          "User Logon Name: $userLogonName"
+          "User Logon Name: "{{ userLogonName }}"
           "Generated Password: $password"  
 
       } catch {
@@ -33,4 +33,4 @@
 
 - name: Display User Credentials
   debug:
-    var: userCred
+    var: userCred.output
