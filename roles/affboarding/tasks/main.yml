@@ -23,3 +23,7 @@
       $userCode = "{{ user_code }}"  # Variable passed from Ansible
       Disable-UserAccounts -userCode $userCode
   register: offboarding_result
+  
+- name: Offoarding Result
+  debug:
+    var: offboarding_result
