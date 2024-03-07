@@ -1,6 +1,6 @@
 ---
 - name: Offboarding Users
-  hosts: DC
+  hosts: Winds
   gather_facts: no
   
   roles:
