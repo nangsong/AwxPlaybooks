@@ -5,7 +5,7 @@
       Import-Module ActiveDirectory
 
       function Disable-UserAccounts($userCode) {
-          $suffixes = @("_a", "_da", "_ca")
+          $suffixes = @("","_a", "_da", "_ca")
           $accountPatterns = foreach ($suffix in $suffixes) {
               $userCode + $suffix
           }
@@ -22,3 +22,4 @@
       }
       $userCode = "{{ user_code }}"  # Variable passed from Ansible
       Disable-UserAccounts -userCode $userCode
+  register: offboarding_result
