@@ -17,7 +17,7 @@
               DisplayName           = "{{ userLogonName }}"
               AccountPassword       = (ConvertTo-SecureString -String $password -AsPlainText -Force)
               Enabled               = $true
-              PasswordNeverExpires  = $false
+              PasswordNeverExpires  = $true
               Path                  = "OU=Users,OU=NSHSOFT,DC=nshsoft,DC=local" 
           }
 
@@ -29,3 +29,8 @@
       } catch {
           "Error creating user account: $_" 
       } 
+  register: userCred
+
+- name: Display User Credentials
+  debug:
+    var: userCred
