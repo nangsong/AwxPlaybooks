@@ -16,7 +16,7 @@
                       Remove-ADGroupMember -Identity $_ -Members $user -Confirm:$false
                   }
                   Disable-ADAccount -Identity $user -Confirm:$false
-                  Write-Host "Disabled account and removed group membership: $userName"
+                  "Disabled account and removed group membership: $userName"
               }
           }
       }
