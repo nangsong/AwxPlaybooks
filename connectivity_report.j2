@@ -1,11 +1,11 @@
 *****************************************************
-*   THE FOLLOWING SERVERS NOT RESPONDING            *
+*       THE FOLLOWING SERVERS NOT RESPONDING        *
 *****************************************************
 {% for host in ansible_play_hosts %}
 {% for item in hostvars[host].ping_result %}
-{% if item.ping is undefined %}
+{% if item.failed  %}
 {{ host }}
 {% endif %}
 {% endfor %}
 {% endfor %}
-************************** -END- *********************
+************************** -END- ********************
