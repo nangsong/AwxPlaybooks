@@ -1,6 +1,6 @@
 ---
 - hosts: Winds
   gather_facts: false
-    
+  ignore_errors: yes  
   roles:
     - connectivity
