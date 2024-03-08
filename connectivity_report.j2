@@ -1,0 +1,11 @@
+*****************************************************
+*   THE FOLLOWING SERVERS NOT RESPONDING            *
+*****************************************************
+{% for host in ansible_play_hosts %}
+{% for item in hostvars[host].unreachable %}
+{% if item = 1 %}
+{{ host }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+************************** -END- *********************

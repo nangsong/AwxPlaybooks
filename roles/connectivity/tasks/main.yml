@@ -3,6 +3,9 @@
   ansible.windows.win_ping:
   register: ping_result
 
-- name: Display Ping_result
-  debug:
-    var: ping_result
+- name: Building Availability Report
+  ansible.windows.win_template:
+    src: connectivity_report.j2
+    dest: C:\Availability_report.txt
+  run_once: yes
+  delegate_to: DC
