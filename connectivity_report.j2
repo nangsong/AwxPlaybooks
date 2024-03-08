@@ -2,6 +2,6 @@
 *       THE FOLLOWING SERVERS ARE NOT RESPONDING OR AVAILABLE      *
 ********************************************************************
 {% for item in ping_results %}
-{{ item }}
+{{loop.item}}- {{ item }}
 {% endfor %}
 ************************** -END- ***********************************
