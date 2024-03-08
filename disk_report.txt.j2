@@ -1,6 +1,8 @@
 HOSTNAME,TOTAL-GB,FREE-GB,PERCENTAGE-USED,STATUS
 {% for host in ansible_play_hosts %}
 {% for item in hostvars[host].report_content %}
+{% if item.Usage >= 30 %}
 {{ item.Host }},{{ item.total }},{{ item.free }},{{ item.Usage }},{{ item.Status }} 
+{%endif%}
 {% endfor %}
 {% endfor %}
