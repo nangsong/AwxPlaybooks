@@ -1,0 +1,8 @@
+---
+- name: Server Availability Check
+  ansible.windows.win_ping:
+  register: ping_result
+
+- name: Display Ping_result
+  debug:
+    var: ping_result
