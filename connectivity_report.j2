@@ -1,7 +1,7 @@
 *****************************************************
 *       THE FOLLOWING SERVERS NOT RESPONDING        *
 *****************************************************
-{% for item in hostvars[host].ping_results %}
+{% for item in ping_results %}
 {{ item }}
 {% endfor %}
 ************************** -END- ********************

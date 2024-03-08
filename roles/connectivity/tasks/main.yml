@@ -6,6 +6,8 @@
 - name: building results
   set_fact:
     ping_results: "{{ ansible_play_hosts_all|difference(ansible_play_hosts) }}"
+  run_once: yes
+  delegate_to: DC
 
 - name: Building Availability Report
   debug:
