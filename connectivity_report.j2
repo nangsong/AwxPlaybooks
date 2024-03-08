@@ -1,9 +1,9 @@
 *****************************************************
 *       THE FOLLOWING SERVERS NOT RESPONDING        *
 *****************************************************
-{% for host in ansible_play_hosts %}
+{% for host in ansible_play_hosts_all %}
 {% for item in hostvars[host].ping_result %}
-{% if item.failed  %}
+{% if item.ping is undefined  %}
 {{ host }}
 {% endif %}
 {% endfor %}
