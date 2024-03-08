@@ -3,7 +3,7 @@
 *****************************************************
 {% for host in ansible_play_hosts_all %}
 {% for item in hostvars[host].ping_result %}
-{% if item is undefined  %}
+{% if item is defined  %}
 {{ host }}
 {% endif %}
 {% endfor %}
