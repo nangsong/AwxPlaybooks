@@ -2,8 +2,8 @@
 *   THE FOLLOWING SERVERS NOT RESPONDING            *
 *****************************************************
 {% for host in ansible_play_hosts %}
-{% for item in hostvars[host].unreachable %}
-{% if item == 1 %}
+{% for item in hostvars[host].ping_result %}
+{% if item.ping is undefined %}
 {{ host }}
 {% endif %}
 {% endfor %}
