@@ -11,3 +11,10 @@
   debug:
     var: ping_results
   run_once: yes
+
+- name: Building Availability Report
+  ansible.windows.win_template:
+    src: connectivity_report.j2
+    dest: C:\Availability_report.txt
+  delegate_to: DC
+  run_once: yes
