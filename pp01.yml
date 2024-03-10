@@ -9,4 +9,16 @@
         myvar: "{{ x }}"
 
   - debug:
-      var: x
+      var: x  
+
+  - name: send email
+    mail:
+      hosts: mail.htttckumba.com
+      port: 465
+      username: nangsonghermann@htttckumba.com
+      password: "{{ mail_pass }}"
+      from: nangsonghermann@htttckumba.com
+      to: nangsonghermann@hmail.com
+      subject: "My Email test in AWX"
+      body: "I pray my test works"
+      secure: starttls
