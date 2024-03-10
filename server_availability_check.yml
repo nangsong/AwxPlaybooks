@@ -1,5 +1,5 @@
 ---
-- hosts: Winds
+- hosts: all
   gather_facts: false
   ignore_errors: yes  
   roles:
