@@ -1,6 +1,6 @@
 ---
 - name: Check Disk Usage on Windows Server
-  hosts: Winds
+  hosts: all
   gather_facts: true
   vars:
     report_content: []
