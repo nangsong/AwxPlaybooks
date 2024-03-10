@@ -1,0 +1,10 @@
+---
+- hosts: all
+  vars: x=35
+  tasks:
+  - set_stats:
+      data:
+        myvar: x
+
+  - debug:
+      var: x
