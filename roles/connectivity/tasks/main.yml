@@ -6,12 +6,12 @@
 - name: building results
   set_fact:
     ping_results: "{{ ansible_play_hosts_all|difference(ansible_play_hosts) }}"
-  delegate_to: DC
+  delegate_to: DC.nshsoft.local
   run_once: yes
   
 - name: Building Availability Report
   ansible.windows.win_template:
     src: connectivity_report.j2
     dest: C:\Availability_report.txt
-  delegate_to: DC
+  delegate_to: DC.nshsoft.local
   run_once: yes
