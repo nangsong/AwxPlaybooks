@@ -1,6 +1,6 @@
 ---
 - name: Testing Connectivity
-  hosts: Winds
+  hosts: all
   gather_facts: false 
   ignore_errors: true 
   tasks:
