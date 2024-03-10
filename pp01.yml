@@ -6,7 +6,7 @@
   tasks:
   - set_stats:
       data:
-        myvar: x
+        myvar: "{{ x }}"
 
   - debug:
       var: x
