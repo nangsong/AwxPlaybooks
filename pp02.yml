@@ -1,7 +1,5 @@
 ---
 - hosts: all
-  vars: x: 35
   tasks:
-
   - debug:
       msg: "This value comes from the first play: {{ myvar }}"

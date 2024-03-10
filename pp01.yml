@@ -1,6 +1,6 @@
 ---
 - hosts: all
-  vars: x=35
+  vars: x: 35
   tasks:
   - set_stats:
       data:
