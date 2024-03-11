@@ -1,0 +1,40 @@
+---
+- name: Get unique Security errors
+  ansible.windows.win_powershell:
+    script: |
+      $TimeLimit = (Get-Date).AddHours(-3)
+      $SeenEvents = @{}
+
+      Get-EventLog -LogName Security -After $TimeLimit -EntryType Error |
+        Where-Object { -not $SeenEvents.ContainsKey($_.EventID) } |
+        ForEach-Object {
+          $SeenEvents[$_.EventID] = $true
+          New-Object PSObject -Property @{ EventID = $_.EventID; Message = $_.Message }
+        }
+    register: security_errors
+  become: true
+
+- name: Display unique Security errors
+  debug:
+    msg: "Security Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
+  loop: "{{ security_errors.stdout }}"
+
+- name: Get unique Application errors
+  ansible.windows.win_powershell:
+    script: |
+      $TimeLimit = (Get-Date).AddHours(-3)
+      $SeenEvents = @{}
+
+      Get-EventLog -LogName Application -After $TimeLimit -EntryType Error |
+        Where-Object { -not $SeenEvents.ContainsKey($_.EventID) } |
+        ForEach-Object {
+          $SeenEvents[$_.EventID] = $true
+          New-Object PSObject -Property @{ EventID = $_.EventID; Message = $_.Message }
+        }
+    register: app_errors
+  become: true
+
+- name: Display unique Application errors
+  debug:
+    msg: "Application Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
+  loop: "{{ app_errors.stdout }}"
