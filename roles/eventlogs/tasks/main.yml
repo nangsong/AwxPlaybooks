@@ -4,13 +4,13 @@
     script: |
       $TimeLimit = (Get-Date).AddHours(-24)
       $SeenEvents = @{}
-
       Get-EventLog -LogName System -After $TimeLimit -EntryType Error |
-        Where-Object { -not $SeenEvents.ContainsKey($_.EventID) } |
-        ForEach-Object {
-          $SeenEvents[$_.EventID] = $true
-          New-Object PSObject -Property @{ EventID = $_.EventID; Message = $_.Message }
-        }
+      Where-Object { -not $SeenEvents.ContainsKey($_.EventID) } |
+      ForEach-Object {
+        $SeenEvents[$_.EventID] = $true
+        $MessageFirstLine = $_.Message.Split("`n")[0]  # Split by newline
+        New-Object PSObject -Property @{ EventID = $_.EventID; Message = $MessageFirstLine }
+      }
   register: System_errors
   
 
@@ -29,7 +29,8 @@
         Where-Object { -not $SeenEvents.ContainsKey($_.EventID) } |
         ForEach-Object {
           $SeenEvents[$_.EventID] = $true
-          New-Object PSObject -Property @{ EventID = $_.EventID; Message = $_.Message }
+          $MessageFirstLine = $_.Message.Split("`n")[0]  # Split by newline
+          New-Object PSObject -Property @{ EventID = $_.EventID; Message = $MessageFirstLine }
         }
   register: app_errors
   
