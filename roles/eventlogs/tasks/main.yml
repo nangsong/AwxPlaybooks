@@ -37,3 +37,10 @@
   debug:
     msg: "Application Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
   loop: "{{ app_errors.output }}"
+
+- name: Building Event log Report
+  ansible.windows.win_template:
+    src: Eventlob_report.j2
+    dest: C:\HealthReports\Eventlog_report.csv
+  run_once: yes
+  delegate_to: Dc.nshsoft.local
