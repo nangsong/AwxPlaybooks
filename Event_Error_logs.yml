@@ -1,7 +1,7 @@
 ---
 - name: Extract unique Security and Application errors from Event Viewer (last 3 hours)
   hosts: all  
-  gather_facts:
+  gather_facts: false
 
   roles:
     - eventlogs
