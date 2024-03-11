@@ -1,22 +1,22 @@
 ---
-- name: Get unique Security errors
+- name: Get unique System errors
   ansible.windows.win_powershell:
     script: |
       $TimeLimit = (Get-Date).AddHours(-24)
       $SeenEvents = @{}
 
-      Get-EventLog -LogName Security -After $TimeLimit -EntryType Error |
+      Get-EventLog -LogName System -After $TimeLimit -EntryType Error |
         Where-Object { -not $SeenEvents.ContainsKey($_.EventID) } |
         ForEach-Object {
           $SeenEvents[$_.EventID] = $true
           New-Object PSObject -Property @{ EventID = $_.EventID; Message = $_.Message }
         }
-  register: security_errors
+  register: System_errors
   
 
-- name: Display unique Security errors
+- name: Display unique System errors
   debug:
-    msg: "Security Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
+    msg: "System Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
   loop: "{{ security_errors.output }}"
 
 - name: Get unique Application errors
