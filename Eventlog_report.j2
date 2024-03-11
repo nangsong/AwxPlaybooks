@@ -1,5 +1,5 @@
-{% for host in ansible_play_hosts%}
 SERVER,LOG,EVENT_ID,DESCRIPTION
+{% for host in ansible_play_hosts%}
 {% for item in hostvars[host].System_errors.output %}
 {{ host}},System,{{ item.EventID }},{{ item.Message }}
 {% endfor %}
