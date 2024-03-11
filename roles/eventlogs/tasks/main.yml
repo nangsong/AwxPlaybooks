@@ -2,7 +2,7 @@
 - name: Get unique Security errors
   ansible.windows.win_powershell:
     script: |
-      $TimeLimit = (Get-Date).AddHours(-16)
+      $TimeLimit = (Get-Date).AddHours(-24)
       $SeenEvents = @{}
 
       Get-EventLog -LogName Security -After $TimeLimit -EntryType Error |
@@ -22,7 +22,7 @@
 - name: Get unique Application errors
   ansible.windows.win_powershell:
     script: |
-      $TimeLimit = (Get-Date).AddHours(-3)
+      $TimeLimit = (Get-Date).AddHours(-24)
       $SeenEvents = @{}
 
       Get-EventLog -LogName Application -After $TimeLimit -EntryType Error |
