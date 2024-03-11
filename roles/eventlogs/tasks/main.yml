@@ -11,7 +11,7 @@
           $SeenEvents[$_.EventID] = $true
           New-Object PSObject -Property @{ EventID = $_.EventID; Message = $_.Message }
         }
-    register: security_errors
+  register: security_errors
   
 
 - name: Display unique Security errors
@@ -31,7 +31,7 @@
           $SeenEvents[$_.EventID] = $true
           New-Object PSObject -Property @{ EventID = $_.EventID; Message = $_.Message }
         }
-    register: app_errors
+  register: app_errors
   
 - name: Display unique Application errors
   debug:
