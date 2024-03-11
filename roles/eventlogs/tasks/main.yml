@@ -2,7 +2,7 @@
 - name: Get unique Security errors
   ansible.windows.win_powershell:
     script: |
-      $TimeLimit = (Get-Date).AddHours(-3)
+      $TimeLimit = (Get-Date).AddHours(-16)
       $SeenEvents = @{}
 
       Get-EventLog -LogName Security -After $TimeLimit -EntryType Error |
@@ -17,7 +17,7 @@
 - name: Display unique Security errors
   debug:
     msg: "Security Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
-  loop: "{{ security_errors.stdout }}"
+  loop: "{{ security_errors.output }}"
 
 - name: Get unique Application errors
   ansible.windows.win_powershell:
@@ -36,4 +36,4 @@
 - name: Display unique Application errors
   debug:
     msg: "Application Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
-  loop: "{{ app_errors.stdout }}"
+  loop: "{{ app_errors.output }}"
