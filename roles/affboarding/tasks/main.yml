@@ -4,24 +4,27 @@
     script: | 
       Import-Module ActiveDirectory
 
-      function Disable-UserAccounts($userCode) {
-          $suffixes = @("","_a", "_da", "_ca")
-          $accountPatterns = foreach ($suffix in $suffixes) {
-              $userCode + $suffix
-          }
-          foreach ($userName in $accountPatterns) {
-              $user = Get-ADUser -Filter "SamAccountName -like '$userName'" -ErrorAction SilentlyContinue
-              if ($user) {
-                  Get-ADGroup -Filter * -Properties Members | Where-Object {$_.Members -like $user.DistinguishedName} | ForEach-Object{
-                      Remove-ADGroupMember -Identity $_ -Members $user -Confirm:$false
+      function Disable-UserAccounts($userCodes) {
+          $suffixes = "","_a", "_da", "_ca"
+          foreach ($userCode in $userCodes) {
+            $accountPatterns = $suffixes | ForEach-Object { $userCode + $_ }
+            foreach ($userName in $accountPatterns) {
+                  $user = Get-ADUser -Filter "SamAccountName -like '$userName'" -ErrorAction SilentlyContinue
+
+                  if ($user) {
+                      Disable-ADAccount -Identity $user -Confirm:$false
+                      Get-ADGroup -Filter "Members -like '$($user.DistinguishedName)'" -Properties Members | 
+                          Remove-ADGroupMember -Members $user -Confirm:$false 
+
+                      "Disabled account and removed group membership: $userName"
+                  } else {
+                      "User account not found: $userName"
                   }
-                  Disable-ADAccount -Identity $user -Confirm:$false
-                  "Disabled account and removed group membership: $userName"
               }
           }
       }
-      $userCode = "{{ user_code }}"  # Variable passed from Ansible
-      Disable-UserAccounts -userCode $userCode
+      $userCodes = "{{ user_code }}"  # Variable passed from Ansible
+      Disable-UserAccounts -userCode $userCodes
   register: offboarding_result
   
 - name: Offoarding Result

@@ -21,4 +21,6 @@
       to: nangsonghermann@hmail.com
       subject: "My Email test in AWX"
       body: "I pray my test works"
+      attach:
       secure: starttls
+    
