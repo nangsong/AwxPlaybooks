@@ -14,10 +14,10 @@
   register: System_errors
   
 
-- name: Display unique System errors
-  debug:
-    msg: "System Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
-  loop: "{{ System_errors.output }}"
+#- name: Display unique System errors
+ # debug:
+#    msg: "System Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
+#  loop: "{{ System_errors.output }}"
 
 - name: Get unique Application errors
   ansible.windows.win_powershell:
@@ -34,10 +34,10 @@
         }
   register: app_errors
   
-- name: Display unique Application errors
-  debug:
-    msg: "Application Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
-  loop: "{{ app_errors.output }}"
+#- name: Display unique Application errors
+#  debug:
+#    msg: "Application Event ID: {{ item.EventID }} - Message: {{ item.Message }}"
+#  loop: "{{ app_errors.output }}"
 
 - name: Building Event log Report
   ansible.windows.win_template:

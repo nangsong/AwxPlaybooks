@@ -6,4 +6,5 @@ SERVER,LOG,EVENT_ID,DESCRIPTION
 {% for item in hostvars[host].app_errors.output %}
 {{ host}},Application,{{ item.EventID }},{{ item.Message }}
 {% endfor %}
+############
 {% endfor %}
