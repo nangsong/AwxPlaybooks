@@ -40,7 +40,7 @@
 
 - name: Building Event log Report
   ansible.windows.win_template:
-    src: Eventlob_report.j2
+    src: Eventlog_report.j2
     dest: C:\HealthReports\Eventlog_report.csv
   run_once: yes
   delegate_to: DC.nshsoft.local
