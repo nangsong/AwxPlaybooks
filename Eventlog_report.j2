@@ -1,4 +1,4 @@
-{% for host in ansible_play_hots%}
+{% for host in ansible_play_hosts%}
 Server_Name,Log_Name,Event_ID,Description
 {% for item in hostvars[host].security_errors.output %}
 {{ host}},Security,{{ item.EventID }},{{ item.Message }}
