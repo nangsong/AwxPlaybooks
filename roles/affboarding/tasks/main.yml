@@ -4,27 +4,33 @@
     script: | 
       Import-Module ActiveDirectory
 
-      function Disable-UserAccounts($userCodes) {
+      function Disable-UserAccounts($userCodesString) {
           $suffixes = "","_a", "_da", "_ca"
+
+          $userCodes = $userCodesString -split ","
+
           foreach ($userCode in $userCodes) {
-            $accountPatterns = $suffixes | ForEach-Object { $userCode + $_ }
-            foreach ($userName in $accountPatterns) {
+              $accountPatterns = $suffixes | ForEach-Object { $userCode + $_ }
+
+              foreach ($userName in $accountPatterns) {
                   $user = Get-ADUser -Filter "SamAccountName -like '$userName'" -ErrorAction SilentlyContinue
 
                   if ($user) {
                       Disable-ADAccount -Identity $user -Confirm:$false
+
                       Get-ADGroup -Filter "Members -like '$($user.DistinguishedName)'" -Properties Members | 
                           Remove-ADGroupMember -Members $user -Confirm:$false 
 
                       "Disabled account and removed group membership: $userName"
                   } else {
-                      "User account not found: $userName"
+                     "User account not found: $userName"
                   }
               }
           }
       }
-      $userCodes = "{{ user_code }}"  # Variable passed from Ansible
-      Disable-UserAccounts -userCode $userCodes
+      $userCodesString = "{{ user_code }}"
+      Disable-UserAccounts -userCodesString $userCodesString
+      "User account disabling completed."
   register: offboarding_result
   
 - name: Offoarding Result
