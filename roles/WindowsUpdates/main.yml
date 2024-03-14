@@ -1,0 +1,16 @@
+---
+- name: Check for available Windows updates
+  win_updates:
+    state: searched  # Search for updates without installing
+    reboot: no       # Suppress potential reboots
+  register: update_search_results
+
+- name: Install Windows updates (if desired)
+  win_updates:
+    category_names: 
+      - CriticalUpdates
+      - SecurityUpdates
+    reboot: no  # Suppress reboots
+  register: update_install_results
+
+
