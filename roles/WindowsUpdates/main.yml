@@ -1,16 +1,38 @@
 ---
-- name: Check for available Windows updates
-  win_updates:
-    state: searched  # Search for updates without installing
-    reboot: no       # Suppress potential reboots
-  register: update_search_results
+- name: Install PSWindowsUpdate Module (if needed)
+  community.windows.win_psmodule:
+    name: PSWindowsUpdate
+    state: present
 
-- name: Install Windows updates (if desired)
-  win_updates:
-    category_names: 
-      - CriticalUpdates
-      - SecurityUpdates
-    reboot: no  # Suppress reboots
-  register: update_install_results
+- name: Find Matching Updates
+  ansible.windows.win_powershell:
+    script: |
+      Import-Module PSWindowsUpdate
 
+      $categories = @("Security Updates", "Critical Updates", "Definition Updates", "Update Rollups")
+      $releaseMonth = {{ release_month }}
+      $releaseYear = {{ release_year }}
 
+      $updates = Get-WUList | Where-Object {
+          $categories -contains $_.Category -and
+          $_.Date.Month -eq $releaseMonth -and
+          $_.Date.Year -eq $releaseYear
+      }
+
+      $updates | ConvertTo-Json
+  register: matching_updates
+
+- name: Download and Install Updates (No Reboot)
+  ansible.windows.win_powershell:
+    script: |
+      Import-Module PSWindowsUpdate
+      $updates = ConvertFrom-Json {{ matching_updates.stdout }}
+
+      if ($updates) {
+          Install-WUUpdates -KBArticleID $updates.KBArticleID -AcceptAll -NoReboot
+      } else {
+         "No updates found matching the criteria."
+      }
+  when: matching_updates.stdout  # Only run if updates are found
+
+  
