@@ -1,6 +1,7 @@
 ---
-- name: Windows Server patching
-  hosts: all
+- name: Windows Updates Installation and Reporting
+  hosts: all  
   #ignore_errors: yes
+  gather_facts: yes
   roles:
     - WindowsUpdates
