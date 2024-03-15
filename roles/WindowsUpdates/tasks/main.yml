@@ -4,8 +4,8 @@
     category_names: 
       - CriticalUpdates
       - SecurityUpdates
-    reboot: yes  
-    reboot_timeout: 600 
+    reboot: no  
+    #reboot_timeout: 600 
 
 - name: Generate report of installed updates
   win_powershell:
