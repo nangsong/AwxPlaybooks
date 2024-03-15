@@ -6,15 +6,10 @@
       - SecurityUpdates
     reboot: yes 
     reboot_timeout: 600 
+  register: updates_results
 
-- name: Generate report of installed updates
-  ansible.windows.win_updates:
-    script: Get-Hotfix | ConvertTo-Json
-  register: updates_report
-
-- name: Save updates report to a file
-  ansible.builtin.copy:
-    content: "{{ updates_report.stdout }}"
-    dest: windows_updates_report_{{ ansible_date_time.iso8601 }}.json
+- name: view
+  debug:
+    var: updates_results
 
   
