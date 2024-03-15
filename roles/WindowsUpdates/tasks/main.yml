@@ -8,7 +8,7 @@
     #reboot_timeout: 600 
 
 - name: Generate report of installed updates
-  win_powershell:
+  ansible.windows.win_updates:
     script: Get-Hotfix | ConvertTo-Json
   register: updates_report
 
