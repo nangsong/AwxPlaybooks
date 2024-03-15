@@ -4,8 +4,8 @@
     category_names: 
       - CriticalUpdates
       - SecurityUpdates
-    reboot: no  
-    #reboot_timeout: 600 
+    reboot: yes 
+    reboot_timeout: 600 
 
 - name: Generate report of installed updates
   ansible.windows.win_updates:
