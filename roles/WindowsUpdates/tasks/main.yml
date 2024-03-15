@@ -1,8 +1,8 @@
 ---
 - name: Install PSWindowsUpdate Module (if needed)
-  community.windows.win_psmodule:
-    name: PSWindowsUpdate
-    state: present
+  ansible.windows.win_powershell:
+    script: |
+      Install-Module -Name PSWindowsUpdate
 
 - name: Find Matching Updates
   ansible.windows.win_powershell:
