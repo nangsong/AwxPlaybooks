@@ -1,38 +1,20 @@
 ---
-- name: Install PSWindowsUpdate Module (if needed)
-  ansible.windows.win_powershell:
-    script: |
-      Install-Module -Name PSWindowsUpdate
+- name: Download and install Windows updates
+  ansible.windows.win_updates:
+    category_names: 
+      - CriticalUpdates
+      - SecurityUpdates
+    reboot: yes  
+    reboot_timeout: 600 
 
-- name: Find Matching Updates
-  ansible.windows.win_powershell:
-    script: |
-      Import-Module PSWindowsUpdate
+- name: Generate report of installed updates
+  win_powershell:
+    script: Get-Hotfix | ConvertTo-Json
+  register: updates_report
 
-      $categories = @("Security Updates", "Critical Updates", "Definition Updates", "Update Rollups")
-      $releaseMonth = {{ release_month }}
-      $releaseYear = {{ release_year }}
-
-      $updates = Get-WUList | Where-Object {
-          $categories -contains $_.Category -and
-          $_.Date.Month -eq $releaseMonth -and
-          $_.Date.Year -eq $releaseYear
-      }
-
-      $updates | ConvertTo-Json
-  register: matching_updates
-
-- name: Download and Install Updates (No Reboot)
-  ansible.windows.win_powershell:
-    script: |
-      Import-Module PSWindowsUpdate
-      $updates = ConvertFrom-Json {{ matching_updates.stdout }}
-
-      if ($updates) {
-          Install-WUUpdates -KBArticleID $updates.KBArticleID -AcceptAll -NoReboot
-      } else {
-         "No updates found matching the criteria."
-      }
-  when: matching_updates.stdout  # Only run if updates are found
+- name: Save updates report to a file
+  ansible.builtin.copy:
+    content: "{{ updates_report.stdout }}"
+    dest: windows_updates_report_{{ ansible_date_time.iso8601 }}.json
 
   
