@@ -1,6 +1,6 @@
 ---
 - name: Windows Server patching
   hosts: all
-  
+  ignore_errors: yes
   roles:
     - WindowsUpdates
