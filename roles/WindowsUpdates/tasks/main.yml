@@ -4,7 +4,7 @@
     category_names: 
       - CriticalUpdates
       - SecurityUpdates
-      - RollupsUpdates
+      - UpdatesRollups
     #reboot: yes 
     #reboot_timeout: 600 
     state: searched
