@@ -18,6 +18,6 @@
   debug:
     msg: |
       {% for k in updates_results.updates %}
-      {{ k.title }}
+      {{ k }}
       {% endfor %}
   
