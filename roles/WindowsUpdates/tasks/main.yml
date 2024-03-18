@@ -6,7 +6,8 @@
       - SecurityUpdates
       - UpdatesRollups
     #reboot: yes 
-    #reboot_timeout: 600 
+    #reboot_timeout: 600
+    log_path: C:\ansible_upd.txt 
     state: searched
   register: updates_results
 
