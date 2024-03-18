@@ -18,9 +18,7 @@
 - name: display updates found
   debug:
     msg: |
-      {% for k in updates_results.updates %}
-      {% for i in updates_results.updates[k].title %}
-      {{ updates_results.updates[k].title[i] }}
-      {% endfor %}
+      {% for k in updates_results.updates.title %}
+      {{ updates_results.updates.title[k] }}
       {% endfor %}
   
