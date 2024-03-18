@@ -29,7 +29,7 @@
 
 - name: Creating local File
   ansible.windows.win_template:
-    src: templates/disk_report.txt.j2
+    src: disk_report.txt.j2
     dest: C:\Drive_C_report-{{ ansible_date_time.year }}{{ ansible_date_time.month }}{{ ansible_date_time.day }}-{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}{{ ansible_date_time.second}}.csv
   delegate_to: DC.nshsoft.local
   run_once: true 
