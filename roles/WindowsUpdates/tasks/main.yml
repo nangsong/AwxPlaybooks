@@ -4,12 +4,19 @@
     category_names: 
       - CriticalUpdates
       - SecurityUpdates
-    reboot: yes 
-    reboot_timeout: 600 
+    #reboot: yes 
+    #reboot_timeout: 600 
+    state: searched
   register: updates_results
 
 - name: view
   debug:
     var: updates_results
 
+- name: display updates found
+  debud:
+    msg: |
+      {% for k in updates_results %}
+      {{updates_results[k].title}}
+      {% endfor %}
   
