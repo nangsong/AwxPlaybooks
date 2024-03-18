@@ -14,7 +14,7 @@
     var: updates_results
 
 - name: display updates found
-  debud:
+  debug:
     msg: |
       {% for k in updates_results %}
       {{updates_results[k].title}}
