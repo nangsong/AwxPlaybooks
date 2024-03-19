@@ -1,10 +1,14 @@
 ---
 - hosts: all
-  ignore_errors: yes
   tasks:
-  - name: copying files from nsw-01 to nsw-02
-    ansible.windows.win_copy:
-      src: \\NSW-01\myshared\file2copy.txt
-      dest: C:\
-      remote_src: true
-    
+    - name: Gather facts
+      setup:
+        filter:
+          - ansible_hostname
+
+    - name: Transfer file from win-01 to other hosts
+      win_copy:
+        src: C:\myshared\file2copy.txt
+        dest: C:\
+        remote_src: yes
+      when: inventory_hostname != 'NSW-01'
