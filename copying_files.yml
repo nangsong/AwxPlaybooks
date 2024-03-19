@@ -1,0 +1,10 @@
+---
+- hosts: all
+  ignore_errors: yes
+  tasks:
+  - name: copying files from nsw-01 to nsw-02
+    ansible.windows.win_copy:
+      src: \\NSW-01\myshared\file2copy.txt
+      dest: C:\
+      remote_src: true
+    
