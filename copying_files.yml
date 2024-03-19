@@ -11,4 +11,5 @@
         src: C:\myshared\file2copy.txt
         dest: C:\
         remote_src: yes
+      delegate_to: NSW-01
       when: inventory_hostname != 'NSW-01'
