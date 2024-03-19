@@ -6,14 +6,18 @@
         filter:
           - ansible_hostname
 
+    - name: Create a dynamic group of target hosts
+      add_host:
+        name: "{{ item }}"
+        groups: target_hosts
+      loop: "{{ ansible_play_batch | difference(['NSW-01']) | list }}"
+      run_once: true
+
+- hosts: target_hosts
+  tasks:
     - name: Transfer file from NSW-01 to other hosts
       win_copy:
         src: C:\myshared\file2copy.txt
         dest: C:\
         remote_src: yes
       delegate_to: NSW-01
-      when: inventory_hostname != 'NSW-01'
-      loop: "{{ ansible_play_batch }}"
-      loop_control:
-        loop_var: target_host
-      when: target_host != 'NSW-01'
