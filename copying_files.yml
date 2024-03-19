@@ -6,10 +6,14 @@
         filter:
           - ansible_hostname
 
-    - name: Transfer file from win-01 to other hosts
+    - name: Transfer file from NSW-01 to other hosts
       win_copy:
         src: C:\myshared\file2copy.txt
         dest: C:\
         remote_src: yes
       delegate_to: NSW-01
       when: inventory_hostname != 'NSW-01'
+      loop: "{{ ansible_play_batch }}"
+      loop_control:
+        loop_var: target_host
+      when: target_host != 'NSW-01'
