@@ -1,23 +1,14 @@
 ---
 - hosts: all
-  tasks:
-    - name: Gather facts
-      setup:
-        filter:
-          - ansible_hostname
+gather_facts: false
+ignore_errors: true
+tasks:
+- name: Deleting previously copied files
+  ansible.windows.win_powershell:
+    script: |
+      Remove-Item -Path "C:\file2copy"
 
-    - name: Create a dynamic group of target hosts
-      add_host:
-        name: "{{ item }}"
-        groups: target_hosts
-      loop: "{{ ansible_play_batch | difference(['NSW-01']) | list }}"
-      run_once: true
-
-- hosts: target_hosts
-  tasks:
-    - name: Transfer file from NSW-01 to other hosts
-      win_copy:
-        src: C:\myshared\file2copy.txt
-        dest: C:\
-        remote_src: yes
-      delegate_to: NSW-01
+- name: Copyinf file to windows hosts
+  ansible.windows.win_powershell:
+    script: |
+      Copy-Item -Path "\\DC.nshsoft.local\file2copy".txt" -Destination "C:\"
