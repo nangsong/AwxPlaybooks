@@ -1,0 +1,6 @@
+SERVER_NAME,TITLE
+{% for host in ansible_play_hosts %}
+{% for upd in hostvars[host].updates_results.updates %}
+{{ host }},{{ hostvars[host].updates_results.updates[upd].title }}
+{% endfor %}
+{% endfor %}

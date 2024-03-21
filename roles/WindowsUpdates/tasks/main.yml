@@ -7,7 +7,6 @@
       - UpdatesRollups
     #reboot: yes 
     #reboot_timeout: 600
-    log_path: C:\ansible_upd.txt 
     state: searched
   register: updates_results
 
@@ -15,10 +14,16 @@
   debug:
     var: updates_results
 
-- name: display updates found
-  debug:
-    msg: |
-      {% for k in updates_results.updates %}
-      {{ updates_results.updates[k].title }}
-      {% endfor %}
+# - name: display updates found
+#   debug:
+#     msg: |
+#       {% for k in updates_results.updates %}
+#       {{ updates_results.updates[k].title }}
+#       {% endfor %}
+- name: Building upddate search report
+  ansible.windows.win_template:
+    src: templates/found_updates.j2
+    dest: C:\update_search.csv
+  delegate_to: DC.nshsoft.local
+  run_once: true
   
