@@ -11,10 +11,10 @@
           Import-Module ActiveDirectory
 
           # Define the name of the OU to create
-          $ouName = "NewOU100"
+          $ouName = "AWSW"
 
           # Define the distinguished name of the parent container where you want to create the OU
-          $parentContainer = "OU=Computers,OU=NSHSOFT,DC=nshsoft,DC=local"
+          $parentContainer = "OU=Servers,OU=Computers,OU=Foundation Common,OU=NSHSOFT,DC=nshsoft,DC=local"
 
           # Create the OU
           New-ADOrganizationalUnit -Name $ouName -Path $parentContainer
