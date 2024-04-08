@@ -10,5 +10,5 @@
       to: hermanngael47@gmail.com
       subject: Email By Ansible
       body: Test successful
-      delegate_to: localhost
+    delegate_to: DC
     run_once: yes
