@@ -2,7 +2,8 @@
 - hosts: all
   tasks:
   - name: Sending an email using Ansible
-    community.general.mail:
+    #community.general.mail:
+    mail:
       host: smtp.gmail.com
       port: 587
       username: nangsonghermann@gmail.com
