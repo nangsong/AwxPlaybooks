@@ -7,8 +7,9 @@
       port: 587
       username: nangsonghermann@gmail.com
       password: "{{ p }}"
-      to: hermanngael47@gmail.com
+      to: Hermann Gael <hermanngael47@gmail.com>
       subject: Email By Ansible
-      body: Test successful
-    delegate_to: DC.nshsoft.local
+      body: System {{ ansible_hostname }} has been successfully provisioned.
+    #delegate_to: DC.nshsoft.local
     run_once: yes
+
