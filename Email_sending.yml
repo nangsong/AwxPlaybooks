@@ -1,5 +1,5 @@
 ---
-- hosts: localhost
+- hosts: winds
   tasks:
   - name: Sending an email using Ansible
     community.general.mail:
