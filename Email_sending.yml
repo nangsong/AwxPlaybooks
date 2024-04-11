@@ -1,5 +1,5 @@
 ---
-- hosts: winds
+- hosts: Winds
   tasks:
   - name: Sending an email using Ansible
     community.general.mail:
