@@ -1,5 +1,10 @@
 ---
 - hosts: all
+  collesctions:
+  - community.windows
+  - community.general
+  - chocolatey.chocolatey
+  - microsoft.ad
   tasks:
   - name: Sending an email using Ansible
     community.general.mail:
