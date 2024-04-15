@@ -10,6 +10,6 @@
       to: Hermann Gael <hermanngael47@gmail.com>
       subject: Email By Ansible
       body: System {{ ansible_hostname }} has been successfully provisioned.
-    #delegate_to: DC.nshsoft.local
+    delegate_to: DC
     run_once: yes
 
