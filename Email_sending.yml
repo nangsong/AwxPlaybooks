@@ -1,6 +1,6 @@
 ---
 - hosts: all
-  collesctions:
+  collections:
   - community.windows
   - community.general
   - chocolatey.chocolatey
