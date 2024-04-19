@@ -6,6 +6,7 @@
     microsoft.ad.ou:
       name: AnsibleFest01
       path: OU=NSHSOFT,DC=nshsoft,DC=local
-      state: present
+      #state: present
+      state: absent
     delegate_to: DC
     run_once: yes
