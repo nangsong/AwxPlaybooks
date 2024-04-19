@@ -4,8 +4,8 @@
   tasks:
   - name: Ensure OU is present & protected
     microsoft.ad.ou:
-      name: AnsibleFest
-      #path: OU=NSHSOFT,DC=nshsoft,DC=local
+      name: AnsibleFest01
+      path: OU=NSHSOFT,DC=nshsoft,DC=local
       state: present
     delegate_to: DC
     run_once: yes
