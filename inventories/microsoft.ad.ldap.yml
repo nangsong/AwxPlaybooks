@@ -7,4 +7,4 @@ plugin: microsoft.ad.ldap
 # password:
 ### End custom credential type ###
 
-search_base: OU=Servers,OU=NSH,DC=nsh,DC=lab
+search_base: OU=NSH,OU=Servers,DC=nsh,DC=lab
