@@ -1,8 +1,9 @@
 plugin: microsoft.ad.ldap
 
-attributes:
-  OperatingSystem:
+#attributes:
+#OperatingSystem:
 groups:
   windows: true
-  production: '"Production" in computer_membership'
+  NSH: '"nsh" in computer_membership'
+
 search_base: OU=NSH,DC=nsh,DC=lab
