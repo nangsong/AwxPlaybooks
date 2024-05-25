@@ -1,8 +1,6 @@
 plugin: microsoft.ad.ldap
 
-attributes:
-  dnsHostName:
-    # Sets the value of dnsHostName to the inventory_hostname
-    # variable for the host
-    ansible_host:
 search_base: OU=NSH,DC=nsh,DC=lab
+
+vars:
+  ansible_host: null
