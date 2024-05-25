@@ -1,5 +1,4 @@
 plugin: microsoft.ad.ldap
 
 search_base: OU=NSH,DC=nsh,DC=lab
-compose:
-  ansible_host: "{cn}"
+hostname_filter: "inventory_hostname/CN=([^,]+)/"
