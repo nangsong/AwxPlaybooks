@@ -1,7 +1,11 @@
 plugin: microsoft.ad.ldap
 
-#attributes:
-#OperatingSystem:
+attributes:
+OperatingSystem:
+dnsHostName:
+  # Sets the value of dnsHostName to the inventory_hostname
+  # variable for the host
+  inventory_hostname:
 groups:
   windows: true
   NSH: '"nsh" in computer_membership'
