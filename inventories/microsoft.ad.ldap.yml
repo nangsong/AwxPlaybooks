@@ -6,8 +6,7 @@ dnsHostName:
   # Sets the value of dnsHostName to the inventory_hostname
   # variable for the host
   inventory_hostname:
-groups:
-  windows: true
-  NSH: '"nsh" in computer_membership'
+#groups:
+# windows: true
 
 search_base: OU=NSH,DC=nsh,DC=lab
