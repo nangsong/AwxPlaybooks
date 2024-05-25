@@ -1,6 +1,4 @@
 plugin: microsoft.ad.ldap
-
+attributes:
+  ansible_host: "{ipHostNumber}"
 search_base: OU=NSH,DC=nsh,DC=lab
-compose:
-  hostnameIP: "{ipHostNumber}"
-  ansible_host: hostnameIP
