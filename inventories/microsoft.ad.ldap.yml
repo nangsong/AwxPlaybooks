@@ -1,6 +1,3 @@
 plugin: microsoft.ad.ldap
+#search_base: OU=NSH,DC=nsh,DC=lab
 
-search_base: OU=NSH,DC=nsh,DC=lab
-
-vars:
-  ansible_host: null
