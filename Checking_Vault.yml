@@ -1,0 +1,6 @@
+- hosts: all
+  tasks:
+    - name: Display the value of the variable names and password01
+      debug:
+        msg: "names: {{ namess }}, password01: {{ password01 }}"
+      run_once: yes
