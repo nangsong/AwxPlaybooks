@@ -1,12 +1,21 @@
 ---
-- name: Power Off Windows Server
-  hosts: "{{ myhost  }}"
-  tasks:
-    - name: Shut down Windows host
-      ansible.windows.win_shutdown:
-        shutdown_timeout: 60 # Time to wait before shutting down (seconds)
+- hosts: "{{ myhost }}"
+  gather_facts: no
 
-    - name: Wait for server to go offline
-      ansible.builtin.wait_for_disconnection:
-        delay: 15 # Delay before starting to check (seconds)
-        timeout: 300 # How long to wait for disconnection (seconds)
+  tasks:
+    - name: Power off Windows server
+      win_command: shutdown.exe /s /t 60 /c "Powering off server"
+      async: 60
+      poll: 0
+      become: yes
+      become_method: runas
+      become_user: SYSTEM
+      ignore_errors: yes
+
+    - name: Wait for the Windows server to power off
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 5986
+        state: stopped
+        timeout: 120
+      delegate_to: localhost
