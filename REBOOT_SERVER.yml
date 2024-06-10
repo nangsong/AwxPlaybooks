@@ -6,13 +6,10 @@
       ansible.windows.win_reboot:
         shutdown_timeout: 60
         reboot_timeout: 300
-        test_command: 'powershell.exe -NoLogo -NonInteractive -NoProfile -Command "(Test-Connection -ComputerName localhost -Count 1 -Quiet) -And ((Get-Service WinRM).Status -eq "Running")"'
       register: reboot_result
-      async: 1
-      poll: 0
 
     - name: Wait for server to come back online
-      ansible.builtin.wait_for_connection:
+      ansible.windows.win_wait_for_connection:
         delay: 15
         timeout: 300
         sleep: 15
