@@ -9,7 +9,7 @@
       register: reboot_result
 
     - name: Wait for server to come back online
-      ansible.windows.win_wait_for_connection:
+      ansible.builtin.wait_for_connection:
         delay: 15
         timeout: 300
         sleep: 15
