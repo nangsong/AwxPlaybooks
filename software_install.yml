@@ -2,7 +2,7 @@
 - name: Install software on Windows servers
   hosts: "{{ myhost }}"
   vars:
-    shared_folder: "\\NSH-DC01\MyShared"
+    shared_folder: "\\\\NSH-DC01\\MyShared"
     temp_folder: "C:\temp\"
   tasks:
     - name: Create temporary folder
