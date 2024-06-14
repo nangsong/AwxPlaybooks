@@ -3,7 +3,7 @@
   hosts: "{{ myhost }}"
   vars:
     shared_folder: "\\\\NSH-DC01\\MyShared\\"
-    temp_folder: "C:\temp\"
+    temp_folder: "C:\\temp\\"
   tasks:
     - name: Create temporary folder
       ansible.windows.win_file:
@@ -15,7 +15,6 @@
         src: "{{ shared_folder }}{{ software_name }}"
         dest: "{{ temp_folder }}{{ software_name }}"
         remote_src: yes
-      
 
     - name: Install MSI package
       ansible.windows.win_package:
