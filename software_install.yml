@@ -1,8 +1,8 @@
 ---
 - name: Install packages on Windows servers using Chocolatey
   hosts: "{{ myhost }}"
-  vars:
-    chocolatey_packages: "{{ packages.split(',') }}"
+  # vars:
+  #   chocolatey_packages: "{{ packages.split(',') }}"
 
   tasks:
     - name: Install Chocolatey
