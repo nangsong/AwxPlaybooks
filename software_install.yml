@@ -1,33 +1,17 @@
 ---
-- name: Install software on Windows servers
+- name: Install packages on Windows servers using Chocolatey
   hosts: "{{ myhost }}"
   vars:
-    shared_folder: "\\\\NSH-DC01\\MyShared"
-    temp_folder: "C:\\temp"
+    chocolatey_packages: "{{ packages.split(',') }}"
+
   tasks:
-    - name: Create temporary folder
-      ansible.windows.win_file:
-        path: "{{ temp_folder }}"
-        state: directory
-
-    - name: Copy software file to temporary folder using PowerShell
-      ansible.windows.win_powershell:
-        script: |
-          Copy-Item -Path "{{ shared_folder }}\\{{ software_name }}" -Destination "{{ temp_folder }}\\{{ software_name }}" -Force
-
-    - name: Install software package
-      ansible.windows.win_package:
-        path: "{{ temp_folder }}\\{{ software_name }}"
-        product_id: "{{ software_name | splitext | first }}"
-        arguments: /q /norestart
+    - name: Install Chocolatey
+      win_chocolatey:
+        name: chocolatey
         state: present
 
-    - name: Delete temporary files
-      ansible.windows.win_file:
-        path: "{{ temp_folder }}\\{{ software_name }}"
-        state: absent
-
-    - name: Remove temporary folder
-      ansible.windows.win_file:
-        path: "{{ temp_folder }}"
-        state: absent
+    - name: Install packages using Chocolatey
+      win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ chocolatey_packages }}"
