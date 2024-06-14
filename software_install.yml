@@ -10,27 +10,27 @@
         path: "{{ temp_folder }}"
         state: directory
 
-    - name: Copy MSI file to temporary folder
+    - name: Copy file to temporary folder
       ansible.windows.win_copy:
-        src: "{{ shared_folder }}\\{{ software_name }}.msi"
-        dest: "{{ temp_folder }}\\{{ software_name }}.msi"
-      when: software_name is ansible.builtin.match(".*\\.msi$")
+        src: "{{ shared_folder }}\\{{ software_name }}"
+        dest: "{{ temp_folder }}\\{{ software_name }}"
+      # when: software_name is ansible.builtin.match(".*\\.msi$")
 
-    - name: Copy EXE file to temporary folder
-      ansible.windows.win_copy:
-        src: "{{ shared_folder }}\\{{ software_name }}.exe"
-        dest: "{{ temp_folder }}\\{{ software_name }}.exe"
-      when: software_name is ansible.builtin.match(".*\\.exe$")
+    # - name: Copy EXE file to temporary folder
+    #   ansible.windows.win_copy:
+    #     src: "{{ shared_folder }}\\{{ software_name }}"
+    #     dest: "{{ temp_folder }}\\{{ software_name }}"
+    #   when: software_name is ansible.builtin.match(".*\\.exe$")
 
     - name: Install MSI package
       ansible.windows.win_package:
-        path: "{{ temp_folder }}\\{{ software_name }}.msi"
+        path: "{{ temp_folder }}\\{{ software_name }}"
         state: present
       when: software_name is ansible.builtin.match(".*\\.msi$")
 
     - name: Install EXE package
       ansible.windows.win_package:
-        path: "{{ temp_folder }}\\{{ software_name }}.exe"
+        path: "{{ temp_folder }}\\{{ software_name }}"
         product_id: "{{ software_name }}"
         arguments: /q /norestart
       when: software_name is ansible.builtin.match(".*\\.exe$")
