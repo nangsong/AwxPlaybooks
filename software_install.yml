@@ -1,37 +1,33 @@
 ---
 - name: Install software on Windows servers
   hosts: "{{ myhost }}"
+  vars:
+    shared_folder: "\\\\NSH-DC01\\MyShared"
+    temp_folder: "C:\\temp"
   tasks:
     - name: Create temporary folder
       ansible.windows.win_file:
-        path: C:\temp
+        path: "{{ temp_folder }}"
         state: directory
 
-    - name: Copy file to temporary folder
-      ansible.windows.win_copy:
-        src: \\NSH-DC01\MyShared"{{ software_name }}"
-        dest: C:\temp"{{ software_name }}"
-        remote_src: yes
+    - name: Copy software file to temporary folder using PowerShell
+      ansible.windows.win_powershell:
+        script: |
+          Copy-Item -Path "{{ shared_folder }}\\{{ software_name }}" -Destination "{{ temp_folder }}\\{{ software_name }}" -Force
 
-    - name: Install MSI package
+    - name: Install software package
       ansible.windows.win_package:
-        path: C:\temp"{{ software_name }}"
-        state: present
-      when: software_name is ansible.builtin.match(".*\\.msi$")
-
-    - name: Install EXE package
-      ansible.windows.win_package:
-        path: C:\temp\"{{ software_name }}"
-        product_id: "{{ software_name }}"
+        path: "{{ temp_folder }}\\{{ software_name }}"
+        product_id: "{{ software_name | splitext | first }}"
         arguments: /q /norestart
-      when: software_name is ansible.builtin.match(".*\\.exe$")
+        state: present
 
     - name: Delete temporary files
       ansible.windows.win_file:
-        path: C:\temp\"{{ software_name }}.*"
+        path: "{{ temp_folder }}\\{{ software_name }}"
         state: absent
 
     - name: Remove temporary folder
       ansible.windows.win_file:
-        path: C:\temp
+        path: "{{ temp_folder }}"
         state: absent
