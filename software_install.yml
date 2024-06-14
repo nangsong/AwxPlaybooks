@@ -11,10 +11,9 @@
         state: directory
 
     - name: Copy file to temporary folder
-      ansible.windows.win_copy:
-        src: "{{ shared_folder }}\\{{ software_name }}"
-        dest: "{{ temp_folder }}\\{{ software_name }}"
-        remote_src: yes
+      ansible.windows.win_powershell:
+        script: |
+          Copy-Item -Path "{{ shared_folder }}\\{{ software_name }}" -Destination "{{ temp_folder }}\\{{ software_name }}" -Force
       # when: software_name is ansible.builtin.match(".*\\.msi$")
 
     # - name: Copy EXE file to temporary folder
