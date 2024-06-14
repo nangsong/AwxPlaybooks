@@ -2,8 +2,8 @@
 - name: Install software on Windows servers
   hosts: "{{ myhost }}"
   vars:
-    shared_folder: "\\\\NSH-DC01\\MyShared"
-    temp_folder: "C:\\temp"
+    shared_folder: "\\NSH-DC01\MyShared"
+    temp_folder: "C:\temp\"
   tasks:
     - name: Create temporary folder
       ansible.windows.win_file:
@@ -13,7 +13,7 @@
     - name: Copy file to temporary folder
       ansible.windows.win_powershell:
         script: |
-          Copy-Item -Path "{{ shared_folder }}\\{{ software_name }}" -Destination "{{ temp_folder }}\\{{ software_name }}" -Force
+          Copy-Item -Path "{{ shared_folder }}\{{ software_name }}" -Destination "C:\temp\" -Force
       # when: software_name is ansible.builtin.match(".*\\.msi$")
 
     # - name: Copy EXE file to temporary folder
