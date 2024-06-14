@@ -4,24 +4,24 @@
   tasks:
     - name: Create temporary folder
       ansible.windows.win_file:
-        path: "C:\\temp"
+        path: "C:\temp"
         state: directory
 
     - name: Copy file to temporary folder
       ansible.windows.win_copy:
-        src: "\\\\NSH-DC01\\MyShared\\{{ software_name }}"
-        dest: "C:\\temp\\{{ software_name }}"
+        src: "\\NSH-DC01\\MyShared\\{{ software_name }}"
+        dest: "C:\temp\\{{ software_name }}"
         remote_src: yes
 
     - name: Install MSI package
       ansible.windows.win_package:
-        path: "C:\\temp\\{{ software_name }}"
+        path: "C:\emp\\{{ software_name }}"
         state: present
       when: software_name is ansible.builtin.match(".*\\.msi$")
 
     - name: Install EXE package
       ansible.windows.win_package:
-        path: "C:\\temp\\{{ software_name }}"
+        path: "C:\temp\\{{ software_name }}"
         product_id: "{{ software_name }}"
         arguments: /q /norestart
       when: software_name is ansible.builtin.match(".*\\.exe$")
