@@ -5,7 +5,7 @@
 
   tasks:
     - name: Get latest Windows updates
-      ansible.windows.win_shell:
+      ansible.windows.win_powershell:
         script: |
           Get-WmiObject -Class Win32_QuickFixEngineering | 
           Select-Object -Property HotFixID, Description, InstalledOn |
@@ -15,4 +15,4 @@
 
     - name: Display latest Windows updates
       ansible.builtin.debug:
-        var: updates_output.stdout_lines
+        var: updates_output.output
