@@ -1,0 +1,18 @@
+---
+- name: Display latest Windows updates
+  hosts: "{{ myhost }}"
+  gather_facts: false
+
+  tasks:
+    - name: Get latest Windows updates
+      ansible.windows.win_shell:
+        script: |
+          Get-WmiObject -Class Win32_QuickFixEngineering | 
+          Select-Object -Property HotFixID, Description, InstalledOn |
+          Sort-Object -Property InstalledOn -Descending |
+          Select-Object -First 2
+      register: updates_output
+
+    - name: Display latest Windows updates
+      ansible.builtin.debug:
+        var: updates_output.stdout_lines
