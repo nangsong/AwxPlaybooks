@@ -12,7 +12,9 @@
 - name: Determine Windows Server version
   set_fact:
     windows_server_version: >
-      {% if '2019' in win_version.stdout %}
+      {% if '2022' in win_version.stdout %}
+        Windows Server 2022
+      {% elif '2019' in win_version.stdout %}
         Windows Server 2019
       {% elif '2016' in win_version.stdout %}
         Windows Server 2016
