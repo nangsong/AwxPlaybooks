@@ -1,2 +1,4 @@
 ---
-- hosts: windows_servers
+- hosts: all
+  roles:
+    - project-01
