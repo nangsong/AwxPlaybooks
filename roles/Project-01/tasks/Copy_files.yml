@@ -1,0 +1,22 @@
+---
+- name: Creating MDE folder
+  win_file:
+    path: C:\MDE\
+    state: directory
+
+- name: Copy MDE files to windows hosts
+  ansible.windows.win_powershell:
+    script: |
+      Copy-Item -Path "\\{{ install_src}}\mde\*i" -Destination "C:\MDE\" -Recurse -Force
+  when: "'9W' in ansible_hostname"
+
+- name: Copy MDE files to windows hosts
+  ansible.windows.win_powershell:
+    script: |
+      Copy-Item -Path "\\{{ install_src}}\mde\*i" -Destination "C:\MDE\" -Recurse -Force
+  when: "'4W' in ansible_hostname"
+- name: Copy MDE files to windows hosts
+  ansible.windows.win_powershell:
+    script: |
+      Copy-Item -Path "\\{{ install_src}}\mde\*i" -Destination "C:\MDE\" -Recurse -Force
+  when: "'3W' in ansible_hostname"

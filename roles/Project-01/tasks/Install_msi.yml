@@ -1,0 +1,16 @@
+---
+- name: Install MSI package on Windows Server 2019
+  ansible.windows.win_package:
+    path: C:\mde\md4ws.msi
+    state: present
+  when: windows_server_version == "Windows Server 2019"
+
+- name: Display installation status
+  ansible.builtin.debug:
+    msg: "MSI package installation completed on Windows Server 2019"
+  when: windows_server_version == "Windows Server 2019"
+
+- name: Display skipped installation message
+  ansible.builtin.debug:
+    msg: "MSI package installation skipped (not Windows Server 2019)"
+  when: windows_server_version != "Windows Server 2019"
