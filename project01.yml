@@ -1,4 +1,4 @@
 ---
 - hosts: all
   roles:
-    - project-01
+    - Project-01
