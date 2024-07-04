@@ -1,0 +1,3 @@
+---
+- name: Determine windows version
+  include: determine_win_ver.yml
