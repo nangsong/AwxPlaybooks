@@ -1,0 +1,68 @@
+You can deploy the PowerShell script to a device collection in SCCM to run it on multiple servers or machines within that collection. Here's how you can do it:
+
+### Step 1: Prepare the PowerShell Script
+Make sure you have your PowerShell script ready. If you want to ping multiple servers, you can modify the script to loop through each server in the collection. Here's an example that runs on the local machine:
+
+```powershell
+$ServerName = $env:COMPUTERNAME
+$PingResult = Test-Connection -ComputerName $ServerName -Count 1 -Quiet
+
+if ($PingResult) {
+    Write-Output "$ServerName is up."
+    exit 0
+} else {
+    Write-Output "$ServerName is down."
+    exit 1
+}
+```
+
+This script pings the local machine (since it's run on each server in the collection) and returns whether it's up or down.
+
+### Step 2: Save the Script
+Save the script as a `.ps1` file, for example, `PingLocalServer.ps1`.
+
+### Step 3: Create a New Package in SCCM
+1. Open the **SCCM Console**.
+2. Navigate to **Software Library** > **Application Management** > **Packages**.
+3. Right-click **Packages** and select **Create Package**.
+
+   - **Name**: Give your package a name, like `Ping Servers`.
+   - **Source Folder**: Select the folder where your `PingLocalServer.ps1` script is located.
+   - Click **Next** and then **Close** once the package is created.
+
+### Step 4: Create a Program for the Package
+1. In the **Create Package** wizard, click **New** to create a new program.
+   
+   - **Name**: Enter a name like `Ping Local Server`.
+   - **Command Line**: Enter the command to execute the PowerShell script:
+     ```shell
+     powershell.exe -ExecutionPolicy Bypass -File PingLocalServer.ps1
+     ```
+   - **Run**: Select `Hidden` to prevent the PowerShell window from appearing on the server.
+   - **Program can run**: Select `Whether or not a user is logged on`.
+
+2. Click **Next** through the rest of the wizard, configuring any additional settings as needed, and then click **Close**.
+
+### Step 5: Deploy the Package to a Device Collection
+1. Navigate to **Software Library** > **Application Management** > **Packages**.
+2. Find and right-click the package you created, then select **Deploy**.
+3. In the **Deploy Software Wizard**:
+   - **Collection**: Choose the device collection that contains the servers you want to ping.
+     - If you haven't created a device collection yet, you can do so by navigating to **Assets and Compliance** > **Device Collections** and creating a new collection, adding your target devices.
+   - **Distribution Points**: Select the distribution points to distribute the package.
+   - **Deployment Settings**: Choose the purpose as `Available` or `Required` depending on your needs.
+     - **Available**: Allows users to manually run the script from the Software Center.
+     - **Required**: Forces the script to run on all devices in the collection at a scheduled time.
+
+4. Click **Next** through the rest of the wizard, configuring the scheduling, alerts, and user experience settings as needed, and then click **Deploy**.
+
+### Step 6: Monitor the Deployment
+1. Navigate to **Monitoring** > **Deployments**.
+2. Find the deployment for your ping script and monitor its status.
+3. The deployment status will show success if the server is up (exit code 0) or failure if the server is down (exit code 1).
+
+### Step 7: Review the Results
+- **Deployment Status**: In SCCM, you can view the overall success or failure of the deployment.
+- **Client Logs**: On each server, you can check the `Execmgr.log` located in `C:\Windows\CCM\Logs` to see the details of the script execution.
+
+This method allows you to automate the ping process across multiple servers in a device collection using SCCM.
