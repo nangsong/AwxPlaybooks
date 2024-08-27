@@ -1,0 +1,104 @@
+sudo apt update -y
+sudo apt upgrade -y
+sudo reboot
+
+Docker Installation
+
+sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+apt-cache policy docker-ce
+
+sudo apt install docker-ce -y
+
+
+Install Minikube
+
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+sudo usermod -aG docker $USER && newgrp docker
+
+minikube start --addons=ingress
+
+minikube start --addons=ingress --cpus=2 --memory=6144
+
+
+alias kubectl="minikube kubectl --"
+
+
+create kustomization.yaml file
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Find the latest tag here: https://github.com/ansible/awx-operator/releases
+  - github.com/ansible/awx-operator/config/default?ref=2.5.3
+
+# Set the image tags to match the git version from above
+images:
+  - name: quay.io/ansible/awx-operator
+    newTag: 2.5.3
+
+# Specify a custom namespace in which to install AWX
+namespace: awx
+
+
+$ kubectl apply -k .
+
+$ kubectl config set-context --current --namespace=awx
+
+
+Create awx.yaml file
+
+---
+apiVersion: awx.ansible.com/v1beta1
+kind: AWX
+metadata:
+  name: awx
+spec:
+  service_type: nodeport
+
+update previously created kustomization.yaml resources with awx-server.yaml (line 5)
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Find the latest tag here: https://github.com/ansible/awx-operator/releases
+  - github.com/ansible/awx-operator/config/default?ref=2.5.3
+  - awx.yaml
+
+# Set the image tags to match the git version from above
+images:
+  - name: quay.io/ansible/awx-operator
+    newTag: 2.5.3
+
+# Specify a custom namespace in which to install AWX
+namespace: awx
+
+
+$ kubectl apply -k .
+
+Check the AWX installation logs
+
+$ kubectl logs -f deployments/awx-operator-controller-manager -c awx-manager
+
+Verification Commands
+
+$ kubectl get pods
+$ kubectl get nodes
+$ kubectl get services
+
+To retrieve admin user password, run the following kubectl command
+
+$ kubectl get secret awx-admin-password -o jsonpath="{.data.password}" | base64 --decode; echo
+
+
+Expose the AWX instance to external using kubectl port-forward
+
+$ kubectl port-forward svc/awx-service --address 0.0.0.0 8080:80 &> /dev/null &
+
