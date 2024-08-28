@@ -124,3 +124,31 @@ ansible_connection: winrm
 ansible_winrm_server_cert_validation: ignore
 ansible_winrm_transport: basic
 ansible_winrm_kerberos_delegation: true
+
+
+###########################################################################################
+
+# Number of CPU cores to stress (adjust according to your CPU)
+$maxThreads = [Environment]::ProcessorCount 
+
+# The number of loops to run, higher number will stress more
+$loops = 5000000
+
+# Function to simulate CPU load
+$scriptblock = {
+    for ($i = 0; $i -lt $loops; $i++) {
+        [Math]::Sqrt($i) | Out-Null
+    }
+}
+
+# Create and start threads
+$jobs = @()
+for ($i = 1; $i -le $maxThreads; $i++) {
+    $jobs += Start-Job -ScriptBlock $scriptblock
+}
+
+# Wait for all jobs to finish
+$jobs | Wait-Job
+
+# Clean up jobs
+$jobs | Remove-Job
