@@ -113,3 +113,14 @@ winrm set winrm/config/service/auth '@{Basic="true"}'
 winrm set winrm/config/service/auth '@{Kerberos="true"}'
 New-NetFirewallRule -Name "WinRM HTTP" -DisplayName "WinRM HTTP" -Enabled True -Profile Any -Action Allow -Direction Inbound -Protocol TCP -LocalPort 5985
 winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+
+
+##############################################################################################
+
+ansible_user: administrator
+ansible_password: password@123
+ansible_port: 5985
+ansible_connection: winrm
+ansible_winrm_server_cert_validation: ignore
+ansible_winrm_transport: basic
+ansible_winrm_kerberos_delegation: true
