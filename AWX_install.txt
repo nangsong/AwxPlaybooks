@@ -102,3 +102,14 @@ Expose the AWX instance to external using kubectl port-forward
 
 $ kubectl port-forward svc/awx-service --address 0.0.0.0 8080:80 &> /dev/null &
 
+
+
+#################################################################################################
+
+
+Enable-PSRemoting -Force
+winrm quickconfig
+winrm set winrm/config/service/auth '@{Basic="true"}'
+winrm set winrm/config/service/auth '@{Kerberos="true"}'
+New-NetFirewallRule -Name "WinRM HTTP" -DisplayName "WinRM HTTP" -Enabled True -Profile Any -Action Allow -Direction Inbound -Protocol TCP -LocalPort 5985
+winrm set winrm/config/service '@{AllowUnencrypted="true"}'
