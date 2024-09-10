@@ -1,0 +1,27 @@
+# Number of threads to create (set this higher than the number of CPU cores)
+$maxThreads = [Environment]::ProcessorCount * 100000
+
+# Number of iterations per thread (increase for more load)
+$loops = 5000000000000000000
+
+# Function to simulate a heavy CPU load with more complex calculations
+$scriptblock = {
+    for ($i = 0; $i -lt $loops; $i++) {
+        # Perform more intensive calculations
+        [Math]::Pow([Math]::Sqrt($i), 2) | Out-Null
+        [Math]::Sin($i) | Out-Null
+        [Math]::Cos($i) | Out-Null
+    }
+}
+
+# Create and start threads
+$jobs = @()
+for ($i = 1; $i -le $maxThreads; $i++) {
+    $jobs += Start-Job -ScriptBlock $scriptblock
+}
+
+# Wait for all jobs to finish
+$jobs | Wait-Job
+
+# Clean up jobs
+$jobs | Remove-Job
