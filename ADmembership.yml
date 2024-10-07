@@ -36,7 +36,7 @@
 
     - name: Set fact for existing source_param accounts and their OUs
       set_fact:
-        existing_accounts: "{{ existing_accounts | default({}) | combine({item.item: item.stdout | regex_search('OU=.*?,DC=.*$')}) }}"
+        existing_accounts: "{{ existing_accounts | default({}) | combine({item.item: (item.stdout | regex_search('OU=.*?,DC=.*$')) }) }}"
       when: item.rc == 0
       loop: "{{ source_account_info.results }}"
     
