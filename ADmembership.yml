@@ -20,18 +20,24 @@
           - "{{ source_param }}_a"
           - "{{ source_param }}_ca"
           - "{{ source_param }}_da"
-
+    
     - name: Check if source_param accounts exist and retrieve their OU
       win_shell: |
         Get-ADUser -Identity "{{ item }}" | Select-Object -ExpandProperty DistinguishedName
       register: source_account_info
-      ignore_errors: yes
+      ignore_errors: yes  # Ignore errors if account doesn't exist
       loop: "{{ source_accounts }}"
     
+    - name: Log non-existent source accounts
+      debug:
+        msg: "Source account {{ item.item }} does not exist."
+      when: item.rc != 0
+      loop: "{{ source_account_info.results }}"
+
     - name: Set fact for existing source_param accounts and their OUs
       set_fact:
         existing_accounts: "{{ existing_accounts | default({}) | combine({item.item: item.stdout | regex_search('OU=.*?,DC=.*$')}) }}"
-      when: item.stdout is defined
+      when: item.rc == 0
       loop: "{{ source_account_info.results }}"
     
     - name: Create task_param accounts in the same OU as the source_param accounts
@@ -57,4 +63,3 @@
         get_members: yes
       loop: "{{ source_accounts }}"
       register: source_account_groups
-
