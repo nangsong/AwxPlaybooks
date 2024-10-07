@@ -1,44 +1,63 @@
-- name: Define source and task accounts
-  set_fact:
-    source_accounts: ["SSSS", "SSSS_a", "SSSS_ca", "SSSS_da"]
-    task_accounts: ["TTTT", "TTTT_a", "TTTT_ca", "TTTT_da"]
+---
+- name: Manage AD users and group memberships
+  hosts: all
+  gather_facts: no
+  tasks:
+    
+    - name: Define source and task accounts
+      set_fact:
+        source_accounts: ["SSSS", "SSSS_a", "SSSS_ca", "SSSS_da"]
+        task_accounts: ["TTTT", "TTTT_a", "TTTT_ca", "TTTT_da"]
 
-- name: Check if source_param accounts exist
-  win_shell: |
-    $account = "{{ item }}"
-    $user = Get-ADUser -Identity $account -ErrorAction SilentlyContinue
-    if ($null -ne $user) {
-      Write-Host "EXISTS"
-    } else {
-      Write-Host "MISSING"
-    }
-  register: account_check
-  loop: "{{ source_accounts }}"
-  changed_when: false
+    - name: Check if source_param accounts exist
+      win_shell: |
+        $account = "{{ item }}"
+        $user = Get-ADUser -Identity $account -ErrorAction SilentlyContinue
+        if ($null -ne $user) {
+          Write-Host "EXISTS"
+        } else {
+          Write-Host "MISSING"
+        }
+      register: account_check
+      loop: "{{ source_accounts }}"
+      changed_when: false
 
-- name: Filter out non-existent source accounts
-  set_fact:
-    existing_accounts: "{{ existing_accounts | default({}) | combine({item.item: item.stdout_lines[0]}) }}"
-  when: item.stdout_lines[0] == 'EXISTS'
-  loop: "{{ account_check.results }}"
+    - name: Filter out non-existent source accounts
+      set_fact:
+        existing_accounts: "{{ existing_accounts | default({}) | combine({item.item: item.stdout_lines[0]}) }}"
+      when: item.stdout_lines[0] == 'EXISTS'
+      loop: "{{ account_check.results }}"
 
-- name: Retrieve the OU for existing source accounts
-  win_shell: |
-    Get-ADUser -Identity "{{ item }}" | Select-Object -ExpandProperty DistinguishedName
-  register: ou_check
-  loop: "{{ existing_accounts.keys() }}"
-  changed_when: false
+    - name: Retrieve the OU for existing source accounts
+      win_shell: |
+        Get-ADUser -Identity "{{ item }}" | Select-Object -ExpandProperty DistinguishedName
+      register: ou_check
+      loop: "{{ existing_accounts.keys() }}"
+      changed_when: false
 
-- name: Map source accounts to their OUs
-  set_fact:
-    account_ous: "{{ account_ous | default({}) | combine({item.item: item.stdout_lines[0]}) }}"
-  loop: "{{ ou_check.results }}"
+    - name: Map source accounts to their OUs
+      set_fact:
+        account_ous: "{{ account_ous | default({}) | combine({item.item: item.stdout_lines[0]}) }}"
+      loop: "{{ ou_check.results }}"
 
-- name: Create task_param accounts in the same OU as the source_param accounts
-  win_shell: |
-    $taskAccount = "{{ item.key | regex_replace(source_param, task_param) }}"
-    New-ADUser -Name $taskAccount -UserPrincipalName "$taskAccount@domain.com" -SamAccountName $taskAccount -Path "{{ item.value }}" -AccountPassword (ConvertTo-SecureString "{{ default_password }}" -AsPlainText -Force) -Enabled $true
-  when:
-    - item.value is defined
-    - item.value is not none
-  loop: "{{ account_ous | dict2items }}"
+    - name: Create task_param accounts in the same OU as the source_param accounts
+      win_shell: |
+        $taskAccount = "{{ item.key | regex_replace(source_param, task_param) }}"
+        New-ADUser -Name $taskAccount -UserPrincipalName "$taskAccount@domain.com" -SamAccountName $taskAccount -Path "{{ item.value }}" -AccountPassword (ConvertTo-SecureString "B@nk0fC@N890" -AsPlainText -Force) -Enabled $true
+      when:
+        - item.value is defined
+        - item.value is not none
+      loop: "{{ account_ous | dict2items }}"
+      
+    - name: Add task_param accounts to the same groups as the source_param accounts
+      win_shell: |
+        $sourceAccount = "{{ item.key }}"
+        $taskAccount = "{{ item.key | regex_replace(source_param, task_param) }}"
+        $groups = Get-ADUser -Identity $sourceAccount -Properties MemberOf | Select-Object -ExpandProperty MemberOf
+        foreach ($group in $groups) {
+          Add-ADGroupMember -Identity $group -Members $taskAccount
+        }
+      when: 
+        - item.value is defined
+        - item.value is not none
+      loop: "{{ account_ous | dict2items }}"
