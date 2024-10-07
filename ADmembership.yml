@@ -1,0 +1,46 @@
+---
+- name: Manage AD users and group memberships
+  hosts: all
+  gather_facts: no
+  vars:
+    source_param: "SSSS"
+    task_param: "TTTT"
+    default_password: "B@nk0fC@N890"
+    
+  tasks:
+    - name: Define accounts
+      set_fact:
+        accounts:
+          - "{{ task_param }}"
+          - "{{ task_param }}_a"
+          - "{{ task_param }}_ca"
+          - "{{ task_param }}_da"
+        source_accounts:
+          - "{{ source_param }}"
+          - "{{ source_param }}_a"
+          - "{{ source_param }}_ca"
+          - "{{ source_param }}_da"
+    
+    - name: Ensure task_param accounts exist or create them
+      win_user:
+        name: "{{ item }}"
+        password: "{{ default_password }}"
+        state: present
+      loop: "{{ accounts }}"
+    
+    - name: Ensure task_param accounts are in the same AD groups as source_param accounts
+      win_group_membership:
+        name: "{{ item }}"
+        members: "{{ lookup('win_group_membership', source_account_groups[item]) }}"
+        state: present
+      loop: "{{ accounts }}"
+      vars:
+        source_account_groups: "{{ lookup('win_group_membership', source_accounts) }}"
+
+    - name: Retrieve AD groups of source accounts
+      win_group_membership:
+        name: "{{ item }}"
+        get_members: yes
+      loop: "{{ source_accounts }}"
+      register: source_account_groups
+
