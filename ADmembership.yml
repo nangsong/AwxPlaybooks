@@ -1,65 +1,44 @@
----
-- name: Manage AD users and group memberships
-  hosts: all
-  gather_facts: no
-  vars:
-    source_param: "SSSS"
-    task_param: "TTTT"
-    default_password: "B@nk0fC@N890"
-    
-  tasks:
-    - name: Define accounts
-      set_fact:
-        # Define the task_param and source_param accounts
-        task_accounts:
-          - "{{ task_param }}"
-          - "{{ task_param }}_a"
-          - "{{ task_param }}_ca"
-          - "{{ task_param }}_da"
-        source_accounts:
-          - "{{ source_param }}"
-          - "{{ source_param }}_a"
-          - "{{ source_param }}_ca"
-          - "{{ source_param }}_da"
-    
-    - name: Check if source_param accounts exist and retrieve their OU
-      win_shell: |
-        Get-ADUser -Identity "{{ item }}" | Select-Object -ExpandProperty DistinguishedName
-      register: source_account_info
-      ignore_errors: yes
-      loop: "{{ source_accounts }}"
-    
-    - name: Log non-existent source accounts
-      debug:
-        msg: "Source account {{ item.item }} does not exist."
-      when: item.rc != 0
-      loop: "{{ source_account_info.results }}"
+- name: Define source and task accounts
+  set_fact:
+    source_accounts: ["SSSS", "SSSS_a", "SSSS_ca", "SSSS_da"]
+    task_accounts: ["TTTT", "TTTT_a", "TTTT_ca", "TTTT_da"]
 
-    - name: Set fact for existing source_param accounts and their OUs
-      set_fact:
-        existing_accounts: "{{ existing_accounts | default({}) | combine({item.item: (item.stdout | regex_search('OU=.*?,DC=.*$')) }) }}"
-      when: item.rc == 0
-      loop: "{{ source_account_info.results }}"
-       
-    - name: Create task_param accounts in the same OU as the source_param accounts using PowerShell
-      win_shell: |
-        $taskAccount = "{{ item.key | regex_replace(source_param, task_param) }}"
-        New-ADUser -Name $taskAccount -UserPrincipalName "$taskAccount@domain.com" -SamAccountName $taskAccount -Path "{{ item.value }}" -AccountPassword (ConvertTo-SecureString "{{ default_password }}" -AsPlainText -Force) -Enabled $true
-      when: item.value is defined
-      loop: "{{ existing_accounts | dict2items }}"
+- name: Check if source_param accounts exist
+  win_shell: |
+    $account = "{{ item }}"
+    $user = Get-ADUser -Identity $account -ErrorAction SilentlyContinue
+    if ($null -ne $user) {
+      Write-Host "EXISTS"
+    } else {
+      Write-Host "MISSING"
+    }
+  register: account_check
+  loop: "{{ source_accounts }}"
+  changed_when: false
 
-    
-    - name: Ensure task_param accounts are in the same AD groups as source_param accounts
-      win_group_membership:
-        name: "{{ task_accounts[loop.index0] }}"
-        members: "{{ lookup('win_group_membership', source_account_groups[item.key]) }}"
-        state: present
-      when: item.value is defined
-      loop: "{{ existing_accounts | dict2items }}"
+- name: Filter out non-existent source accounts
+  set_fact:
+    existing_accounts: "{{ existing_accounts | default({}) | combine({item.item: item.stdout_lines[0]}) }}"
+  when: item.stdout_lines[0] == 'EXISTS'
+  loop: "{{ account_check.results }}"
 
-    - name: Retrieve AD groups of source accounts
-      win_group_membership:
-        name: "{{ item }}"
-        get_members: yes
-      loop: "{{ source_accounts }}"
-      register: source_account_groups
+- name: Retrieve the OU for existing source accounts
+  win_shell: |
+    Get-ADUser -Identity "{{ item }}" | Select-Object -ExpandProperty DistinguishedName
+  register: ou_check
+  loop: "{{ existing_accounts.keys() }}"
+  changed_when: false
+
+- name: Map source accounts to their OUs
+  set_fact:
+    account_ous: "{{ account_ous | default({}) | combine({item.item: item.stdout_lines[0]}) }}"
+  loop: "{{ ou_check.results }}"
+
+- name: Create task_param accounts in the same OU as the source_param accounts
+  win_shell: |
+    $taskAccount = "{{ item.key | regex_replace(source_param, task_param) }}"
+    New-ADUser -Name $taskAccount -UserPrincipalName "$taskAccount@domain.com" -SamAccountName $taskAccount -Path "{{ item.value }}" -AccountPassword (ConvertTo-SecureString "{{ default_password }}" -AsPlainText -Force) -Enabled $true
+  when:
+    - item.value is defined
+    - item.value is not none
+  loop: "{{ account_ous | dict2items }}"
