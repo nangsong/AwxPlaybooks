@@ -25,7 +25,7 @@
       win_shell: |
         Get-ADUser -Identity "{{ item }}" | Select-Object -ExpandProperty DistinguishedName
       register: source_account_info
-      ignore_errors: yes  # Ignore errors if account doesn't exist
+      ignore_errors: yes
       loop: "{{ source_accounts }}"
     
     - name: Log non-existent source accounts
@@ -40,12 +40,9 @@
       when: item.rc == 0
       loop: "{{ source_account_info.results }}"
     
-    - name: Create task_param accounts in the same OU as the source_param accounts
-      win_user:
-        name: "{{ item.key }}"
-        password: "{{ default_password }}"
-        ou: "{{ item.value }}"
-        state: present
+    - name: Create task_param accounts in the same OU as the source_param accounts using PowerShell
+      win_shell: |
+        New-ADUser -Name "{{ item.key }}" -UserPrincipalName "{{ item.key }}@domain.com" -SamAccountName "{{ item.key }}" -Path "{{ item.value }}" -AccountPassword (ConvertTo-SecureString "{{ default_password }}" -AsPlainText -Force) -Enabled $true
       when: item.value is defined
       loop: "{{ existing_accounts | dict2items }}"
 
