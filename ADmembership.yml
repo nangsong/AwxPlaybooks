@@ -10,7 +10,8 @@
   tasks:
     - name: Define accounts
       set_fact:
-        accounts:
+        # Define the task_param and source_param accounts
+        task_accounts:
           - "{{ task_param }}"
           - "{{ task_param }}_a"
           - "{{ task_param }}_ca"
@@ -42,13 +43,13 @@
     
     - name: Create task_param accounts in the same OU as the source_param accounts using PowerShell
       win_shell: |
-        New-ADUser -Name "{{ item.key }}" -UserPrincipalName "{{ item.key }}@domain.com" -SamAccountName "{{ item.key }}" -Path "{{ item.value }}" -AccountPassword (ConvertTo-SecureString "{{ default_password }}" -AsPlainText -Force) -Enabled $true
+        New-ADUser -Name "{{ task_accounts[loop.index0] }}" -UserPrincipalName "{{ task_accounts[loop.index0] }}@domain.com" -SamAccountName "{{ task_accounts[loop.index0] }}" -Path "{{ item.value }}" -AccountPassword (ConvertTo-SecureString "{{ default_password }}" -AsPlainText -Force) -Enabled $true
       when: item.value is defined
       loop: "{{ existing_accounts | dict2items }}"
-
+    
     - name: Ensure task_param accounts are in the same AD groups as source_param accounts
       win_group_membership:
-        name: "{{ item.key }}"
+        name: "{{ task_accounts[loop.index0] }}"
         members: "{{ lookup('win_group_membership', source_account_groups[item.key]) }}"
         state: present
       when: item.value is defined
