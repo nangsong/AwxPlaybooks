@@ -20,22 +20,36 @@
           - "{{ source_param }}_a"
           - "{{ source_param }}_ca"
           - "{{ source_param }}_da"
+
+    - name: Check if source_param accounts exist and retrieve their OU
+      win_shell: |
+        Get-ADUser -Identity "{{ item }}" | Select-Object -ExpandProperty DistinguishedName
+      register: source_account_info
+      ignore_errors: yes
+      loop: "{{ source_accounts }}"
     
-    - name: Ensure task_param accounts exist or create them
+    - name: Set fact for existing source_param accounts and their OUs
+      set_fact:
+        existing_accounts: "{{ existing_accounts | default({}) | combine({item.item: item.stdout | regex_search('OU=.*?,DC=.*$')}) }}"
+      when: item.stdout is defined
+      loop: "{{ source_account_info.results }}"
+    
+    - name: Create task_param accounts in the same OU as the source_param accounts
       win_user:
-        name: "{{ item }}"
+        name: "{{ item.key }}"
         password: "{{ default_password }}"
+        ou: "{{ item.value }}"
         state: present
-      loop: "{{ accounts }}"
-    
+      when: item.value is defined
+      loop: "{{ existing_accounts | dict2items }}"
+
     - name: Ensure task_param accounts are in the same AD groups as source_param accounts
       win_group_membership:
-        name: "{{ item }}"
-        members: "{{ lookup('win_group_membership', source_account_groups[item]) }}"
+        name: "{{ item.key }}"
+        members: "{{ lookup('win_group_membership', source_account_groups[item.key]) }}"
         state: present
-      loop: "{{ accounts }}"
-      vars:
-        source_account_groups: "{{ lookup('win_group_membership', source_accounts) }}"
+      when: item.value is defined
+      loop: "{{ existing_accounts | dict2items }}"
 
     - name: Retrieve AD groups of source accounts
       win_group_membership:
