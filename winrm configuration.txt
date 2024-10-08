@@ -1,0 +1,13 @@
+Enable-PSRemoting -Force
+winrm quickconfig
+winrm set winrm/config/service/auth '@{Basic="true"}'
+winrm set winrm/config/service/auth '@{Kerberos="true"}'
+New-NetFirewallRule -Name "WINRM-HTTP" -DisplayName "WINRM-HTTP" -Enabled True  -Profile Any -Action Allow -Direction Inbound  -Protocol TCP -Localport 5985
+New-NetFirewallRule -Name "WINRM-HTTPS" -DisplayName "WINRM-HTTPS" -Enabled True  -Profile Any -Action Allow -Direction Inbound  -Protocol TCP -Localport 5986
+winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+--------------------------------------------------
+$serverFQDN = "WIN2022TEM"  
+$cert = New-SelfSignedCertificate -DnsName $serverFQDN -CertStoreLocation "Cert:\LocalMachine\My"
+$thumbprint = $cert.Thumbprint
+winrm create winrm/config/Listener?Address=*+Transport=HTTPS '@{Hostname="' + $serverFQDN + '"; CertificateThumbprint="' + $thumbprint + '"}'
+winrm enumerate winrm/config/listener
