@@ -42,3 +42,67 @@ Register-ScheduledTask -TaskName "ConfigureWinRM" -Action $Action -Trigger $Trig
 
 
 winrm delete winrm/config/Listener?Address=*+Transport=HTTPS
+
+----------------------------------------------------------------
+            ALTERNATIVE
+----------------------------------------------------------------
+
+# Configure-WinRM.ps1
+
+# Function to check if HTTPS listener is already configured
+function Test-WinRMHttpsListener {
+    $listener = Get-ChildItem WSMan:\localhost\Listener | Where-Object { $_.Keys -like "*Transport=HTTPS*" }
+    return $null -ne $listener
+}
+
+# Check if HTTPS listener is already configured
+if (Test-WinRMHttpsListener) {
+    Write-Host "WinRM HTTPS listener is already configured. Exiting script."
+    exit 0
+}
+
+# Enable WinRM if not already enabled
+if (-not (Get-Service "WinRM").Status -eq "Running") {
+    Write-Host "Enabling WinRM..."
+    winrm quickconfig -quiet
+}
+
+# Check if a certificate with the same name already exists
+$existingCert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -eq "CN=$env:COMPUTERNAME" -and $_.FriendlyName -eq "WinRM HTTPS Certificate" }
+
+if ($existingCert) {
+    Write-Host "Using existing certificate for WinRM HTTPS."
+    $Cert = $existingCert
+} else {
+    Write-Host "Creating new self-signed certificate for WinRM HTTPS..."
+    $Cert = New-SelfSignedCertificate -CertstoreLocation Cert:\LocalMachine\My -DnsName $env:COMPUTERNAME -FriendlyName "WinRM HTTPS Certificate" -NotAfter (Get-Date).AddYears(5)
+}
+
+# Configure WinRM to use HTTPS
+$thumbprint = $Cert.Thumbprint
+Write-Host "Configuring WinRM HTTPS listener..."
+winrm create winrm/config/Listener?Address=*+Transport=HTTPS "@{Hostname=`"$($env:COMPUTERNAME)`"; CertificateThumbprint=`"$thumbprint`"}"
+
+# Open the firewall for WinRM HTTPS if rule doesn't exist
+$firewallRule = Get-NetFirewallRule -DisplayName "WinRM HTTPS" -ErrorAction SilentlyContinue
+if (-not $firewallRule) {
+    Write-Host "Adding firewall rule for WinRM HTTPS..."
+    netsh advfirewall firewall add rule name="WinRM HTTPS" dir=in localport=5986 protocol=TCP action=allow
+}
+
+# Configure WinRM service settings
+Write-Host "Configuring WinRM service settings..."
+winrm set winrm/config/service/auth '@{Basic="true"}'
+winrm set winrm/config/service '@{AllowUnencrypted="false"}'
+
+# Optionally, increase the maximum memory allowed for WinRM
+winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="1024"}'
+
+# Remove HTTP listener if it exists
+$httpListener = Get-ChildItem WSMan:\localhost\Listener | Where-Object { $_.Keys -like "*Transport=HTTP*" }
+if ($httpListener) {
+    Write-Host "Removing HTTP listener..."
+    Remove-Item -Path "WSMan:\localhost\Listener\$($httpListener.Name)" -Recurse
+}
+
+Write-Host "WinRM HTTPS configuration completed successfully."
