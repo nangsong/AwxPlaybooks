@@ -11,3 +11,34 @@ $cert = New-SelfSignedCertificate -DnsName $serverFQDN -CertStoreLocation "Cert:
 $thumbprint = $cert.Thumbprint
 winrm create winrm/config/Listener?Address=*+Transport=HTTPS '@{Hostname="' + $serverFQDN + '"; CertificateThumbprint="' + $thumbprint + '"}'
 winrm enumerate winrm/config/listener
+
+-----------------------------------------------------------------------------------------------
+                                OR
+-----------------------------------------------------------------------------------------------
+# Configure-WinRM.ps1
+
+# Enable WinRM
+winrm quickconfig -quiet
+$Cert = New-SelfSignedCertificate -CertstoreLocation Cert:\LocalMachine\My -DnsName $env:COMPUTERNAME -FriendlyName "WinRM HTTPS Certificate" -NotAfter (Get-Date).AddYears(5)
+
+$thumbprint = $Cert.Thumbprint
+winrm create winrm/config/Listener?Address=*+Transport=HTTPS "@{Hostname=`"$($env:COMPUTERNAME)`"; CertificateThumbprint=`"$thumbprint`"}"
+netsh advfirewall firewall add rule name="WinRM HTTPS" dir=in localport=5986 protocol=TCP action=allow
+
+winrm set winrm/config/service/auth '@{Basic="true"}'
+winrm set winrm/config/service '@{AllowUnencrypted="false"}'
+winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="1024"}'
+winrm delete winrm/config/Listener?Address=*+Transport=HTTP
+Write-Host "WinRM HTTPS configuration completed."
+
+  * Set up a scheduled task to run this script on first boot:In PowerShell on your base image, run
+
+$Action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-ExecutionPolicy Bypass -File C:\Scripts\Configure-WinRM.ps1"
+$Trigger = New-ScheduledTaskTrigger -AtStartup
+$Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -TaskName "ConfigureWinRM" -Action $Action -Trigger $Trigger -Principal $Principal -Description "Configure WinRM HTTPS on first boot"
+
+
+
+
+winrm delete winrm/config/Listener?Address=*+Transport=HTTPS
