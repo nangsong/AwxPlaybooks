@@ -82,3 +82,88 @@ winrm set winrm/config/service '@{AllowUnencrypted="false"}'
 winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="1024"}'
 
 Write-Host "WinRM HTTPS configuration completed successfully."
+
+
+-------------------------------------------------------------------------------------------------------------------------------------
+                                                       WORKS
+-------------------------------------------------------------------------------------------------------------------------------------
+# Configure-WinRM.ps1
+
+# Function to unbind existing SSL certificate
+function Remove-SSLBinding {
+    param (
+        [string]$Port = "5986"
+    )
+    
+    $binding = netsh http show sslcert ipport=0.0.0.0:$Port
+    if ($binding -match "Certificate Hash\s+:\s+(\w+)") {
+        $hash = $matches[1]
+        Write-Host "Removing SSL binding for port $Port with certificate hash $hash"
+        $result = netsh http delete sslcert ipport=0.0.0.0:$Port
+        if ($result -match "SSL Certificate successfully deleted") {
+            Write-Host "SSL binding removed successfully."
+        } else {
+            Write-Host "Failed to remove SSL binding. Error: $result"
+        }
+    } else {
+        Write-Host "No SSL binding found for port $Port"
+    }
+}
+
+# Enable WinRM if not already enabled
+if (-not (Get-Service "WinRM").Status -eq "Running") {
+    Write-Host "Enabling WinRM..."
+    winrm quickconfig -quiet
+}
+
+# Function to get or create certificate
+function Get-OrCreateCertificate {
+    $certSubject = "CN=$env:COMPUTERNAME"
+    $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -eq $certSubject }
+
+    if (-not $cert) {
+        Write-Host "Creating new self-signed certificate for WinRM HTTPS..."
+        $cert = New-SelfSignedCertificate -CertstoreLocation Cert:\LocalMachine\My -DnsName $env:COMPUTERNAME -FriendlyName "WinRM HTTPS Certificate" -NotAfter (Get-Date).AddYears(5)
+    } else {
+        Write-Host "Using existing certificate for WinRM HTTPS."
+    }
+
+    return $cert
+}
+
+# Remove existing SSL binding
+Remove-SSLBinding
+
+# Get or create the certificate
+$cert = Get-OrCreateCertificate
+
+# Configure WinRM to use HTTPS
+$thumbprint = $cert.Thumbprint
+Write-Host "Configuring WinRM for HTTPS..."
+
+# Remove existing HTTPS listeners
+Get-ChildItem WSMan:\localhost\Listener | Where-Object { $_.Keys -like "*Transport=HTTPS*" } | Remove-Item -Recurse -Force
+
+# Create a new HTTPS listener
+New-Item -Path WSMan:\localhost\Listener -Transport HTTPS -Address * -CertificateThumbprint $thumbprint -Force
+
+# Open the firewall for WinRM HTTPS
+Write-Host "Configuring firewall for WinRM HTTPS..."
+$firewallRule = Get-NetFirewallRule -DisplayName "Windows Remote Management (HTTPS-In)" -ErrorAction SilentlyContinue
+if (-not $firewallRule) {
+    New-NetFirewallRule -DisplayName "Windows Remote Management (HTTPS-In)" -Direction Inbound -LocalPort 5986 -Protocol TCP -Action Allow
+} else {
+    Write-Host "Firewall rule for WinRM HTTPS already exists."
+}
+
+# Configure WinRM service settings
+Write-Host "Configuring WinRM service settings..."
+Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
+Set-Item -Path WSMan:\localhost\Service\AllowUnencrypted -Value $false
+Set-Item -Path WSMan:\localhost\Shell\MaxMemoryPerShellMB -Value 1024
+
+# Restart WinRM service
+Restart-Service WinRM -Force
+
+Write-Host "WinRM HTTPS configuration completed successfully."
+Write-Host "To test, run: winrm enumerate winrm/config/listener"
