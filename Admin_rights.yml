@@ -11,4 +11,9 @@
         name: "{{ group_name }}"
         members: "{{ domain }}\\{{ username }}"
         state: present
-      
+      register: group_add_result  # Register the result for conditional output
+
+    - name: Display custom message if account was added
+      debug:
+        msg: "{{ domain }}\\{{ username }} has been successfully added to the {{ group_name }} group on {{ inventory_hostname }}"
+      when: group_add_result.changed
