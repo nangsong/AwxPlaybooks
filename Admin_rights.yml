@@ -1,0 +1,15 @@
+---
+- name: Add domain account to a group on a specific server
+  hosts: all
+  vars:
+    domain: "YOURDOMAIN"         # Define domain here or in inventory
+    username: "your_user"         # Define username here or in inventory
+    group_name: "Administrators"  # Define group name here or in inventory
+  tasks:
+    - name: Add domain account to the specified group
+      win_group_membership:
+        name: "{{ group_name }}"
+        members: "{{ domain }}\\{{ username }}"
+        state: present
+      become: yes
+      become_method: runas
