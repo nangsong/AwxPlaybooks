@@ -11,5 +11,4 @@
         name: "{{ group_name }}"
         members: "{{ domain }}\\{{ username }}"
         state: present
-      become: yes
-      become_method: runas
+      
