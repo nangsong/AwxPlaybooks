@@ -1,25 +1,29 @@
 ---
-- name: Check Windows Failover Cluster Role
+- name: Check Windows Failover Cluster Feature
   hosts: all
   gather_facts: no
   tasks:
-    - name: Check if Failover-Clustering feature is installed
+    - name: Check Failover Clustering feature status
       win_feature:
-        name: Failover Clustering
+        name: Failover-Clustering
         state: present
-      register: cluster_role_status
-      check_mode: yes
+      register: cluster_feature_status
+      check_mode: yes  # Avoids making changes
 
-    - name: Determine Failover-Clustering installation status
+    - name: Display raw output of win_feature
+      debug:
+        var: cluster_feature_status
+
+    - name: Determine if Failover Clustering is installed
       set_fact:
-        cluster_installed: >
-          {{ cluster_role_status.feature_result | selectattr('display_name', 'search', 'Failover Clustering') | map(attribute='success') | list | first | default(false) }}
+        failover_clustering_installed: >
+          {{ cluster_feature_status.feature_result | selectattr('name', 'equalto', 'Failover-Clustering') | map(attribute='install_state') | list | first | default('Not Installed') == 'Installed' }}
 
-    - name: Display Failover-Clustering feature status
+    - name: Display Failover Clustering installation status
       debug:
         msg: >
-          Failover-Clustering feature is
-          {% if cluster_installed %}
+          Failover Clustering feature is
+          {% if failover_clustering_installed %}
             installed
           {% else %}
             not installed
