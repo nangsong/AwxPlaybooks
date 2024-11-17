@@ -1,23 +1,20 @@
 ---
-- name: Check Windows Failover Cluster Feature
+- name: Verify Failover Clustering Installation
   hosts: all
   gather_facts: no
   tasks:
-    - name: Check Failover Clustering feature status
-      win_feature:
-        name: Failover-Clustering
-        state: present
-      register: cluster_feature_status
-      check_mode: yes  # Avoids making changes
+    - name: Check Failover Clustering installation status
+      win_shell: |
+        Get-WindowsFeature -Name Failover-Clustering | Select-Object -ExpandProperty InstallState
+      register: clustering_status
 
-    - name: Display raw output of win_feature
+    - name: Display raw output from PowerShell
       debug:
-        var: cluster_feature_status
+        var: clustering_status.stdout
 
-    - name: Determine if Failover Clustering is installed
+    - name: Determine installation status of Failover Clustering
       set_fact:
-        failover_clustering_installed: >
-          {{ cluster_feature_status.feature_result | selectattr('name', 'equalto', 'Failover-Clustering') | map(attribute='install_state') | list | first | default('Not Installed') == 'Installed' }}
+        failover_clustering_installed: "{{ clustering_status.stdout.strip() == 'Installed' }}"
 
     - name: Display Failover Clustering installation status
       debug:
