@@ -1,5 +1,5 @@
 ---
-- name: Check Failover Clustering status on all servers
+- name: Check Failover Clustering status and generate CSV
   hosts: all
   gather_facts: no
   tasks:
@@ -12,25 +12,20 @@
       set_fact:
         failover_clustering_installed: "{{ clustering_status.stdout.strip() == 'Installed' }}"
 
-    - name: Add server to clustering report
-      ansible.builtin.local_action:
-        module: set_fact
-        args:
-          clustering_report_global: "{{ ansible_local.clustering_report_global | default([]) + [{'server': inventory_hostname, 'status': 'Installed' if failover_clustering_installed else 'Not Installed'}] }}"
-      run_once: true
-      delegate_to: localhost
+    - name: Aggregate clustering report
+      delegate_to: VM01
+      ansible.builtin.lineinfile:
+        path: C:\clustering_report.csv
+        line: "{{ inventory_hostname }},{{ 'Installed' if failover_clustering_installed else 'Not Installed' }}"
+        create: yes
+      run_once: "{{ inventory_hostname == groups['windows_servers'][0] }}"
+      when: clustering_status is defined
 
-- name: Save clustering report to VM01
-  hosts: VM01
-  gather_facts: no
-  tasks:
-    - name: Create clustering report CSV
-      copy:
-        content: |
-          Server,Status
-          {% for item in clustering_report_global %}
-          {{ item.server }},{{ item.status }}
-          {% endfor %}
-        dest: C:\clustering_report.csv
-      vars:
-        clustering_report_global: "{{ hostvars['localhost'].clustering_report_global }}"
+    - name: Ensure CSV header exists
+      delegate_to: VM01
+      ansible.builtin.lineinfile:
+        path: C:\clustering_report.csv
+        line: "Server,Status"
+        create: yes
+        insertbefore: BOF
+      run_once: true
