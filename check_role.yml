@@ -12,19 +12,7 @@
       set_fact:
         failover_clustering_installed: "{{ clustering_status.stdout.strip() == 'Installed' }}"
 
-    - name: Aggregate clustering report
+    - name: Append clustering report to CSV
+      win_shell: |
+        Add-Content -Path "C:\clustering_report.csv" -Value "{{ inventory_hostname }},{{ 'Installed' if failover_clustering_installed else 'Not Installed' }}"
       delegate_to: VM01
-      ansible.builtin.lineinfile:
-        path: C:\clustering_report.csv
-        line: "{{ inventory_hostname }},{{ 'Installed' if failover_clustering_installed else 'Not Installed' }}"
-        create: yes
-      when: clustering_status is defined
-
-    - name: Ensure CSV header exists
-      delegate_to: VM01
-      ansible.builtin.lineinfile:
-        path: C:\clustering_report.csv
-        line: "Server,Status"
-        create: yes
-        insertbefore: BOF
-      run_once: true
