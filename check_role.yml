@@ -16,3 +16,4 @@
       win_shell: |
         Add-Content -Path "C:\clustering_report.csv" -Value "{{ inventory_hostname }},{{ 'Installed' if failover_clustering_installed else 'Not Installed' }}"
       delegate_to: VM01
+      when: clustering_status is defined
