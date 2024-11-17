@@ -12,12 +12,6 @@
       set_fact:
         failover_clustering_installed: "{{ clustering_status.stdout.strip() == 'Installed' }}"
 
-    - name: Append server to CSV if feature is installed
-      win_shell: |
-        Add-Content -Path "C:\clustering_report.csv" -Value "{{ inventory_hostname }},Installed"
-      delegate_to: VM01
-      when: failover_clustering_installed
-
     - name: Ensure CSV header exists (only for Installed Servers)
       win_shell: |
         if (!(Test-Path -Path "C:\clustering_report.csv")) {
@@ -25,3 +19,14 @@
         }
       delegate_to: VM01
       run_once: true
+
+    - name: Add server to CSV if feature is installed and not already in the file
+      win_shell: |
+        $serverName = "{{ inventory_hostname }}"
+        $filePath = "C:\clustering_report.csv"
+        $installedServers = Get-Content $filePath | Select-String -Pattern $serverName
+        if ($installedServers.Count -eq 0) {
+            Add-Content -Path $filePath -Value "$serverName,Installed"
+        }
+      delegate_to: VM01
+      when: failover_clustering_installed
