@@ -1,6 +1,6 @@
 ---
 - name: Check Failover Clustering status and generate CSV for Installed Servers
-  hosts: windows_servers
+  hosts: all
   gather_facts: no
   tasks:
     - name: Check Failover Clustering installation status
