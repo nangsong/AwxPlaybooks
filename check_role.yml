@@ -3,22 +3,22 @@
   hosts: all
   gather_facts: no
   tasks:
-    - name: Check if Failover Cluster role is installed
+    - name: Check if Failover-Clustering feature is installed
       win_feature:
-        name: RSAT-Clustering
+        name: Failover-Clustering
         state: present
       register: cluster_role_status
       check_mode: yes
 
-    - name: Determine Failover Cluster role installation status
+    - name: Determine Failover-Clustering installation status
       set_fact:
         cluster_installed: >
-          {{ cluster_role_status.feature_result | selectattr('display_name', 'search', 'Failover Clustering Tools') | map(attribute='success') | list | first | default(false) }}
+          {{ cluster_role_status.feature_result | selectattr('display_name', 'search', 'Failover Clustering') | map(attribute='success') | list | first | default(false) }}
 
-    - name: Display Failover Cluster role status
+    - name: Display Failover-Clustering feature status
       debug:
         msg: >
-          Failover Cluster role is
+          Failover-Clustering feature is
           {% if cluster_installed %}
             installed
           {% else %}
