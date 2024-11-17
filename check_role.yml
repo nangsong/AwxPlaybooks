@@ -1,0 +1,22 @@
+---
+- name: Check Windows Failover Cluster Role
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Check if Failover Cluster role is installed
+      win_feature:
+        name: RSAT-Clustering
+        state: present
+      register: cluster_role_status
+      check_mode: yes  # Ensures no changes are made
+
+    - name: Display Failover Cluster role status
+      debug:
+        msg: >
+          Failover Cluster role is
+          {% if cluster_role_status.installed %}
+            installed
+          {% else %}
+            not installed
+          {% endif %}
+          on {{ inventory_hostname }}.
