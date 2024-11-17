@@ -18,7 +18,6 @@
         path: C:\clustering_report.csv
         line: "{{ inventory_hostname }},{{ 'Installed' if failover_clustering_installed else 'Not Installed' }}"
         create: yes
-      run_once: "{{ inventory_hostname == groups['windows_servers'][0] }}"
       when: clustering_status is defined
 
     - name: Ensure CSV header exists
