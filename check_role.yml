@@ -8,13 +8,18 @@
         name: RSAT-Clustering
         state: present
       register: cluster_role_status
-      check_mode: yes  # Ensures no changes are made
+      check_mode: yes
+
+    - name: Determine Failover Cluster role installation status
+      set_fact:
+        cluster_installed: >
+          {{ cluster_role_status.feature_result | selectattr('display_name', 'search', 'Failover Clustering Tools') | map(attribute='success') | list | first | default(false) }}
 
     - name: Display Failover Cluster role status
       debug:
         msg: >
           Failover Cluster role is
-          {% if cluster_role_status.installed %}
+          {% if cluster_installed %}
             installed
           {% else %}
             not installed
