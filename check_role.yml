@@ -5,7 +5,7 @@
   tasks:
     - name: Check if Failover-Clustering feature is installed
       win_feature:
-        name: Failover-Clustering
+        name: Failover Clustering
         state: present
       register: cluster_role_status
       check_mode: yes
