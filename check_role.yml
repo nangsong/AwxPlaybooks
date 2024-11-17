@@ -1,5 +1,5 @@
 ---
-- name: Verify Failover Clustering Installation
+- name: Generate Failover Clustering Report
   hosts: all
   gather_facts: no
   tasks:
@@ -8,21 +8,33 @@
         Get-WindowsFeature -Name Failover-Clustering | Select-Object -ExpandProperty InstallState
       register: clustering_status
 
-    - name: Display raw output from PowerShell
-      debug:
-        var: clustering_status.stdout
-
     - name: Determine installation status of Failover Clustering
       set_fact:
         failover_clustering_installed: "{{ clustering_status.stdout.strip() == 'Installed' }}"
 
-    - name: Display Failover Clustering installation status
-      debug:
-        msg: >
-          Failover Clustering feature is
-          {% if failover_clustering_installed %}
-            installed
-          {% else %}
-            not installed
-          {% endif %}
-          on {{ inventory_hostname }}.
+    - name: Add server to clustering report
+      block:
+        - name: Create clustering report entry
+          set_fact:
+            clustering_report: "{{ clustering_report | default([]) + [{'server': inventory_hostname, 'status': 'Installed'}] }}"
+      when: failover_clustering_installed
+
+    - name: Add non-clustering servers to report
+      block:
+        - name: Add non-installed server to report
+          set_fact:
+            clustering_report: "{{ clustering_report | default([]) + [{'server': inventory_hostname, 'status': 'Not Installed'}] }}"
+      when: not failover_clustering_installed
+
+- name: Save Clustering Report on VM01
+  hosts: VM01
+  gather_facts: no
+  tasks:
+    - name: Ensure CSV is generated
+      copy:
+        content: |
+          Server,Status
+          {% for item in hostvars.localhost.clustering_report %}
+          {{ item.server }},{{ item.status }}
+          {% endfor %}
+        dest: C:\clustering_report.csv
