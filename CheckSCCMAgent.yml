@@ -57,5 +57,69 @@
       delegate_to: VM01
       run_once: true
 ---------------------------------------
-TASK [Write summary report on Report VM] ***************************************
-fatal: [FCP9WACMSCP04.bocad.bank-banque-canada.ca -> FCP1WSCCMDP01.bocad.bank-banque-canada.ca]: FAILED! => {"msg": "The task includes an option with an undefined variable. The error was: 'no_agent_list' is undefined. 'no_agent_list' is undefined\n\nThe error appears to be in '/runner/project/CheckSCCMAgent.yml': line 37, column 7, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n\n    - name: Write summary report on Report VM\n      ^ here\n"}
+---
+- name: Check SCCM Agent Presence on Windows Servers
+  hosts: all
+  vars:
+    no_agent_list: []  # Initialize no_agent_list to avoid undefined errors
+
+  tasks:
+    - name: Run PowerShell script to check SCCM agent
+      win_shell: |
+        $serviceName = "ccmexec"
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if ($service) {
+            Write-Output "Present"
+        } else {
+            Write-Output "Absent"
+      register: sccm_status
+      ignore_errors: true  # Allow playbook to continue if the server is unreachable
+
+    - name: Add reachable servers to a list
+      set_fact:
+        reachable_servers: "{{ reachable_servers | default([]) + [inventory_hostname] }}"
+      when: sccm_status is defined and sccm_status.rc == 0
+
+    - name: Add servers without SCCM agent
+      set_fact:
+        no_agent_list: "{{ no_agent_list + [inventory_hostname] }}"
+      when: sccm_status is not defined or "'Absent' in sccm_status.stdout"
+
+    - name: Create report directory on VM01
+      win_file:
+        path: C:\SCCM_Report
+        state: directory
+      delegate_to: VM01
+      run_once: true
+
+    - name: Append server results to CSV on VM01
+      win_shell: |
+        $filePath = "C:\SCCM_Report\sccm_results.csv"
+        if (-not (Test-Path $filePath)) {
+            "Server,Status" | Out-File -FilePath $filePath
+        }
+        "{{ inventory_hostname }},{{ sccm_status.stdout.strip() if sccm_status is defined else 'Unreachable' }}" | Out-File -FilePath $filePath -Append
+      delegate_to: VM01
+
+    - name: Write summary report on Report VM
+      win_shell: |
+        $summaryPath = "C:\SCCM_Report\sccm_summary.txt"
+        $total = {{ reachable_servers | default([]) | length }}
+        $withAgent = {{ (reachable_servers | default([]) | difference(no_agent_list)) | length }}
+        $withoutAgent = {{ no_agent_list | length }}
+        $serversWithoutAgent = @(
+        {% for server in no_agent_list %}
+        "{{ server }}"
+        {% endfor %}
+        )
+
+        @"
+        Total Reachable Servers Checked: $total
+        Servers with SCCM Agent: $withAgent
+        Servers without SCCM Agent: $withoutAgent
+
+        List of Servers without SCCM Agent:
+        $($serversWithoutAgent -join "`n")
+        "@ | Out-File -FilePath $summaryPath
+      delegate_to: VM01
+      run_once: true
