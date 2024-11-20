@@ -1,0 +1,58 @@
+---
+- name: Check SCCM Agent Presence on Windows Servers
+  hosts: all
+  tasks:
+    - name: Run PowerShell script to check SCCM agent
+      win_shell: |
+        $serviceName = "ccmexec"
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if ($service) {
+            Write-Output "Present"
+        } else {
+            Write-Output "Absent"
+        }
+      register: sccm_status
+
+    - name: Gather servers without SCCM Agent
+      set_fact:
+        no_agent_list: "{{ no_agent_list | default([]) + [inventory_hostname] }}"
+      when: "'Absent' in sccm_status.stdout"
+
+    - name: Create report directory on VM01
+      win_file:
+        path: C:\SCCM_Report
+        state: directory
+      delegate_to: VM01
+      run_once: true
+
+    - name: Append server results to CSV on VM01
+      win_shell: |
+        $filePath = "C:\SCCM_Report\sccm_results.csv"
+        if (-not (Test-Path $filePath)) {
+            "Server,Status" | Out-File -FilePath $filePath
+        }
+        "{{ inventory_hostname }},{{ sccm_status.stdout.strip() }}" | Out-File -FilePath $filePath -Append
+      delegate_to: VM01
+
+    - name: Write summary report on VM01
+      win_shell: |
+        $summaryPath = "C:\SCCM_Report\sccm_summary.txt"
+        $total = {{ ansible_play_hosts_all | length }}
+        $withAgent = {{ (ansible_play_hosts_all | difference(no_agent_list)) | length }}
+        $withoutAgent = {{ no_agent_list | length }}
+        $serversWithoutAgent = @(
+        {% for server in no_agent_list %}
+        "{{ server }}"
+        {% endfor %}
+        )
+
+        @"
+        Total Servers Checked: $total
+        Servers with SCCM Agent: $withAgent
+        Servers without SCCM Agent: $withoutAgent
+
+        List of Servers without SCCM Agent:
+        $($serversWithoutAgent -join "`n")
+        "@ | Out-File -FilePath $summaryPath
+      delegate_to: VM01
+      run_once: true
