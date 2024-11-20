@@ -2,7 +2,8 @@
 - name: Check SCCM Agent Presence on Windows Servers
   hosts: all
   vars:
-    no_agent_list: []  # Initialize no_agent_list to avoid undefined errors
+    no_agent_list: []  # Initialize to avoid undefined errors
+    reachable_servers: []  # Initialize to track reachable servers
 
   tasks:
     - name: Run PowerShell script to check SCCM agent
@@ -15,11 +16,11 @@
             Write-Output "Absent"
         }
       register: sccm_status
-      ignore_errors: true  # Allow playbook to continue if the server is unreachable
+      ignore_errors: true
 
     - name: Add reachable servers to a list
       set_fact:
-        reachable_servers: "{{ reachable_servers | default([]) + [inventory_hostname] }}"
+        reachable_servers: "{{ reachable_servers + [inventory_hostname] }}"
       when: sccm_status is defined and sccm_status.rc == 0
 
     - name: Add servers without SCCM agent
@@ -34,34 +35,31 @@
       delegate_to: VM01
       run_once: true
 
-    - name: Append server results to CSV on VM01
-      win_shell: |
-        $filePath = "C:\SCCM_Report\sccm_results.csv"
-        if (-not (Test-Path $filePath)) {
-            "Server,Status" | Out-File -FilePath $filePath
-        }
-        "{{ inventory_hostname }},{{ sccm_status.stdout.strip() if sccm_status is defined else 'Unreachable' }}" | Out-File -FilePath $filePath -Append
-      delegate_to: VM01
-
     - name: Write summary report on Report VM
       win_shell: |
         $summaryPath = "C:\SCCM_Report\sccm_summary.txt"
-        $total = {{ reachable_servers | default([]) | length }}
-        $withAgent = {{ (reachable_servers | default([]) | difference(no_agent_list)) | length }}
-        $withoutAgent = {{ no_agent_list | length }}
+        $totalReachable = {{ reachable_servers | length }}
+        $totalWithAgent = {{ (reachable_servers | difference(no_agent_list)) | length }}
+        $totalWithoutAgent = {{ no_agent_list | length }}
         $serversWithoutAgent = @(
         {% for server in no_agent_list %}
         "{{ server }}"
         {% endfor %}
         )
 
-        @"
-        Total Reachable Servers Checked: $total
-        Servers with SCCM Agent: $withAgent
-        Servers without SCCM Agent: $withoutAgent
+        $reportContent = @"
+        SCCM Agent Check Report
+        ========================
+
+        Total Reachable Servers Checked: $totalReachable
+        Servers with SCCM Agent: $totalWithAgent
+        Servers without SCCM Agent: $totalWithoutAgent
 
         List of Servers without SCCM Agent:
+        -------------------------------
         $($serversWithoutAgent -join "`n")
-        "@ | Out-File -FilePath $summaryPath
+        "@
+
+        $reportContent | Out-File -FilePath $summaryPath
       delegate_to: VM01
       run_once: true
