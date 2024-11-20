@@ -18,19 +18,19 @@
       register: sccm_status
       ignore_errors: true
 
-    - name: Add reachable servers to a list
+    - name: Update reachable servers list
       set_fact:
-        reachable_servers: "{{ reachable_servers + [inventory_hostname] }}"
+        reachable_servers: "{{ reachable_servers | union([inventory_hostname]) }}"
       when: sccm_status.stdout is defined and sccm_status.stdout.strip() in ['Present', 'Absent']
 
-    - name: Add servers without SCCM agent
+    - name: Update list of servers without SCCM agent
       set_fact:
-        no_agent_list: "{{ no_agent_list + [inventory_hostname] }}"
+        no_agent_list: "{{ no_agent_list | union([inventory_hostname]) }}"
       when: sccm_status.stdout is defined and sccm_status.stdout.strip() == 'Absent'
 
     - name: Add unreachable servers to no_agent_list
       set_fact:
-        no_agent_list: "{{ no_agent_list + [inventory_hostname] }}"
+        no_agent_list: "{{ no_agent_list | union([inventory_hostname]) }}"
       when: sccm_status is not defined or sccm_status.stdout is not defined
 
     - name: Create report directory on VM01
