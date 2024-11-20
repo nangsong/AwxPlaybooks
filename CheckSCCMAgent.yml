@@ -2,8 +2,8 @@
 - name: Check SCCM Agent Presence on Windows Servers
   hosts: all
   vars:
-    no_agent_list: []  # Initialize to avoid undefined errors
-    reachable_servers: []  # Initialize to track reachable servers
+    no_agent_list: []  # List for servers without SCCM agent
+    reachable_servers: []  # List for servers successfully reached
 
   tasks:
     - name: Run PowerShell script to check SCCM agent
@@ -21,12 +21,17 @@
     - name: Add reachable servers to a list
       set_fact:
         reachable_servers: "{{ reachable_servers + [inventory_hostname] }}"
-      when: sccm_status is defined and sccm_status.rc == 0
+      when: sccm_status.stdout is defined and sccm_status.stdout.strip() in ['Present', 'Absent']
 
     - name: Add servers without SCCM agent
       set_fact:
         no_agent_list: "{{ no_agent_list + [inventory_hostname] }}"
-      when: sccm_status is not defined or "'Absent' in sccm_status.stdout"
+      when: sccm_status.stdout is defined and sccm_status.stdout.strip() == 'Absent'
+
+    - name: Add unreachable servers to no_agent_list
+      set_fact:
+        no_agent_list: "{{ no_agent_list + [inventory_hostname] }}"
+      when: sccm_status is not defined or sccm_status.stdout is not defined
 
     - name: Create report directory on VM01
       win_file:
@@ -41,11 +46,12 @@
         $totalReachable = {{ reachable_servers | length }}
         $totalWithAgent = {{ (reachable_servers | difference(no_agent_list)) | length }}
         $totalWithoutAgent = {{ no_agent_list | length }}
-        $serversWithoutAgent = @(
+
+        $serversWithoutAgent = @"
         {% for server in no_agent_list %}
-        "{{ server }}"
+        {{ server }}
         {% endfor %}
-        )
+        "@
 
         $reportContent = @"
         SCCM Agent Check Report
@@ -56,8 +62,8 @@
         Servers without SCCM Agent: $totalWithoutAgent
 
         List of Servers without SCCM Agent:
-        -------------------------------
-        $($serversWithoutAgent -join "`n")
+        -----------------------------------
+        $serversWithoutAgent
         "@
 
         $reportContent | Out-File -FilePath $summaryPath
