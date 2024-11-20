@@ -1,0 +1,65 @@
+---
+- name: Check SCCM Agent Presence on Windows Servers
+  hosts: all
+  tasks:
+    - name: Run PowerShell script to check SCCM agent
+      win_shell: |
+        $serviceName = "ccmexec"
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if ($service) {
+            Write-Output "Present"
+        } else {
+            Write-Output "Absent"
+        }
+      register: sccm_status
+      ignore_errors: true
+
+    - name: Set host-specific fact for SCCM agent status
+      set_fact:
+        sccm_status_fact: "{{ sccm_status.stdout | default('Unreachable') | trim }}"
+      when: sccm_status is defined and sccm_status.stdout is defined
+
+- name: Generate SCCM Agent Summary
+  hosts: VM01
+  tasks:
+    - name: Initialize counters and lists
+      set_fact:
+        total_reachable: 0
+        total_with_agent: 0
+        total_without_agent: 0
+        servers_without_agent: []
+        unreachable_servers: []
+
+    - name: Process SCCM statuses from all hosts
+      set_fact:
+        total_reachable: "{{ total_reachable + 1 if hostvars[item].sccm_status_fact != 'Unreachable' else total_reachable }}",
+        total_with_agent: "{{ total_with_agent + 1 if hostvars[item].sccm_status_fact == 'Present' else total_with_agent }}",
+        total_without_agent: "{{ total_without_agent + 1 if hostvars[item].sccm_status_fact == 'Absent' else total_without_agent }}",
+        servers_without_agent: "{{ servers_without_agent + [item] if hostvars[item].sccm_status_fact == 'Absent' else servers_without_agent }}",
+        unreachable_servers: "{{ unreachable_servers + [item] if hostvars[item].sccm_status_fact == 'Unreachable' else unreachable_servers }}"
+      with_items: "{{ groups['all'] }}"
+
+    - name: Write summary report
+      copy:
+        content: |
+          SCCM Agent Check Report
+          ========================
+
+          Total Reachable Servers Checked: {{ total_reachable }}
+          Servers with SCCM Agent: {{ total_with_agent }}
+          Servers without SCCM Agent: {{ total_without_agent }}
+          Unreachable Servers: {{ unreachable_servers | length }}
+
+          List of Servers without SCCM Agent:
+          -----------------------------------
+          {% for server in servers_without_agent %}
+          {{ server }}
+          {% endfor %}
+
+          List of Unreachable Servers:
+          ----------------------------
+          {% for server in unreachable_servers %}
+          {{ server }}
+          {% endfor %}
+        dest: C:\SCCM_Report\sccm_summary.txt
+      delegate_to: VM01
