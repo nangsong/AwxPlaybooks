@@ -37,12 +37,12 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   # Find the latest tag here: https://github.com/ansible/awx-operator/releases
-  - github.com/ansible/awx-operator/config/default?ref=2.5.3
+  - github.com/ansible/awx-operator/config/default?ref=2.19.1
 
 # Set the image tags to match the git version from above
 images:
   - name: quay.io/ansible/awx-operator
-    newTag: 2.5.3
+    newTag: 2.19.1
 
 # Specify a custom namespace in which to install AWX
 namespace: awx
@@ -69,13 +69,13 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   # Find the latest tag here: https://github.com/ansible/awx-operator/releases
-  - github.com/ansible/awx-operator/config/default?ref=2.5.3
+  - github.com/ansible/awx-operator/config/default?ref=2.19.1
   - awx.yaml
 
 # Set the image tags to match the git version from above
 images:
   - name: quay.io/ansible/awx-operator
-    newTag: 2.5.3
+    newTag: 2.19.1
 
 # Specify a custom namespace in which to install AWX
 namespace: awx
@@ -101,85 +101,4 @@ $ kubectl get secret awx-admin-password -o jsonpath="{.data.password}" | base64 
 Expose the AWX instance to external using kubectl port-forward
 
 $ kubectl port-forward svc/awx-service --address 0.0.0.0 8080:80 &> /dev/null &
-
-
-
-#################################################################################################
-
-
-Enable-PSRemoting -Force
-winrm quickconfig
-winrm set winrm/config/service/auth '@{Basic="true"}'
-winrm set winrm/config/service/auth '@{Kerberos="true"}'
-New-NetFirewallRule -Name "WinRM HTTP" -DisplayName "WinRM HTTP" -Enabled True -Profile Any -Action Allow -Direction Inbound -Protocol TCP -LocalPort 5985
-winrm set winrm/config/service '@{AllowUnencrypted="true"}'
-
-
-##############################################################################################
-
-ansible_user: administrator
-ansible_password: password@123
-ansible_port: 5985
-ansible_connection: winrm
-ansible_winrm_server_cert_validation: ignore
-ansible_winrm_transport: basic
-ansible_winrm_kerberos_delegation: true
-
-
-###########################################################################################
-
-# Number of CPU cores to stress (adjust according to your CPU)
-$maxThreads = [Environment]::ProcessorCount 
-
-# The number of loops to run, higher number will stress more
-$loops = 5000000
-
-# Function to simulate CPU load
-$scriptblock = {
-    for ($i = 0; $i -lt $loops; $i++) {
-        [Math]::Sqrt($i) | Out-Null
-    }
-}
-
-# Create and start threads
-$jobs = @()
-for ($i = 1; $i -le $maxThreads; $i++) {
-    $jobs += Start-Job -ScriptBlock $scriptblock
-}
-
-# Wait for all jobs to finish
-$jobs | Wait-Job
-
-# Clean up jobs
-$jobs | Remove-Job
-
-
-######
-# Number of threads to create (set this higher than the number of CPU cores)
-$maxThreads = [Environment]::ProcessorCount * 2
-
-# Number of iterations per thread (increase for more load)
-$loops = 10000000
-
-# Function to simulate a heavy CPU load with more complex calculations
-$scriptblock = {
-    for ($i = 0; $i -lt $loops; $i++) {
-        # Perform more intensive calculations
-        [Math]::Pow([Math]::Sqrt($i), 2) | Out-Null
-        [Math]::Sin($i) | Out-Null
-        [Math]::Cos($i) | Out-Null
-    }
-}
-
-# Create and start threads
-$jobs = @()
-for ($i = 1; $i -le $maxThreads; $i++) {
-    $jobs += Start-Job -ScriptBlock $scriptblock
-}
-
-# Wait for all jobs to finish
-$jobs | Wait-Job
-
-# Clean up jobs
-$jobs | Remove-Job
 
