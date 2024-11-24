@@ -19,9 +19,7 @@
         sccm_status_fact: "{{ sccm_status.stdout | default('Unreachable') | trim }}"
       when: sccm_status is defined and sccm_status.stdout is defined
 
-- name: Generate SCCM Agent Summary
-  hosts: VM01
-  tasks:
+
     - name: Initialize counters and lists
       set_fact:
         total_reachable: 0
@@ -29,6 +27,8 @@
         total_without_agent: 0
         servers_without_agent: []
         unreachable_servers: []
+      delegate_to: VM01
+      run_once: true
 
     - name: Process SCCM statuses from all hosts
       set_fact:
@@ -38,6 +38,8 @@
         servers_without_agent: "{{ servers_without_agent + [item] if hostvars[item].sccm_status_fact == 'Absent' else servers_without_agent }}",
         unreachable_servers: "{{ unreachable_servers + [item] if hostvars[item].sccm_status_fact == 'Unreachable' else unreachable_servers }}"
       with_items: "{{ groups['all'] }}"
+      delegate_to: VM01
+      
 
     - name: Write summary report
       copy:
