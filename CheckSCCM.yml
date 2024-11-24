@@ -70,6 +70,6 @@
     - name: Write summary report on VM01
       win_copy:
         content: "{{ sccm_report_content }}"
-        dest: C:\SCCM_Report\sccm_summary.txt
+        dest: C:\sccm_summary.txt
       delegate_to: VM01
       run_once: true
