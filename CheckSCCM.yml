@@ -35,10 +35,10 @@
 
     - name: Process SCCM statuses from all servers
       set_fact:
-        total_reachable: "{{ total_reachable + (1 if hostvars[item].sccm_status_fact != 'Unreachable' else 0) }}"
-        total_with_agent: "{{ total_with_agent + (1 if hostvars[item].sccm_status_fact == 'Present' else 0) }}"
-        total_without_agent: "{{ total_without_agent + (1 if hostvars[item].sccm_status_fact == 'Absent' else 0) }}"
-        total_unreachable: "{{ total_unreachable + (1 if hostvars[item].sccm_status_fact == 'Unreachable' else 0) }}"
+        total_reachable: "{{ total_reachable | int + (1 if hostvars[item].sccm_status_fact != 'Unreachable' else 0) }}"
+        total_with_agent: "{{ total_with_agent | int + (1 if hostvars[item].sccm_status_fact == 'Present' else 0) }}"
+        total_without_agent: "{{ total_without_agent | int + (1 if hostvars[item].sccm_status_fact == 'Absent' else 0) }}"
+        total_unreachable: "{{ total_unreachable | int + (1 if hostvars[item].sccm_status_fact == 'Unreachable' else 0) }}"
         servers_without_agent: "{{ servers_without_agent + ([item] if hostvars[item].sccm_status_fact == 'Absent' else []) }}"
         servers_unreachable: "{{ servers_unreachable + ([item] if hostvars[item].sccm_status_fact == 'Unreachable' else []) }}"
       with_items: "{{ groups['all'] }}"
