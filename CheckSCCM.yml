@@ -18,39 +18,42 @@
     - name: Record SCCM agent status per host
       set_fact:
         sccm_status_fact: "{{ sccm_status.stdout | default('Unreachable') | trim }}"
+      when: sccm_status is defined and sccm_status.stdout is defined
 
 - name: Generate SCCM Agent Summary
   hosts: localhost
   gather_facts: no
   tasks:
-    - name: Collect results from all servers
+    - name: Initialize summary data
       set_fact:
-        sccm_results: >
-          {{
-            groups['all'] | map('extract', hostvars, 'sccm_status_fact') | list
-          }}
-        servers_with_agent: >
-          {{
-            groups['all'] | selectattr("sccm_status_fact", "equalto", "Present") | list
-          }}
-        servers_without_agent: >
-          {{
-            groups['all'] | selectattr("sccm_status_fact", "equalto", "Absent") | list
-          }}
-        unreachable_servers: >
-          {{
-            groups['all'] | selectattr("sccm_status_fact", "equalto", "Unreachable") | list
-          }}
+        total_reachable: 0
+        total_with_agent: 0
+        total_without_agent: 0
+        total_unreachable: 0
+        servers_without_agent: []
+        servers_unreachable: []
+
+    - name: Process SCCM statuses from all servers
+      set_fact:
+        total_reachable: "{{ total_reachable + 1 if hostvars[item].sccm_status_fact != 'Unreachable' else total_reachable }}",
+        total_with_agent: "{{ total_with_agent + 1 if hostvars[item].sccm_status_fact == 'Present' else total_with_agent }}",
+        total_without_agent: "{{ total_without_agent + 1 if hostvars[item].sccm_status_fact == 'Absent' else total_without_agent }}",
+        total_unreachable: "{{ total_unreachable + 1 if hostvars[item].sccm_status_fact == 'Unreachable' else total_unreachable }}",
+        servers_without_agent: "{{ servers_without_agent + [item] if hostvars[item].sccm_status_fact == 'Absent' else servers_without_agent }}",
+        servers_unreachable: "{{ servers_unreachable + [item] if hostvars[item].sccm_status_fact == 'Unreachable' else servers_unreachable }}"
+      with_items: "{{ groups['all'] }}"
+      loop_control:
+        label: "{{ item }}"
 
     - name: Prepare report content
       set_fact:
         sccm_report_content: |
           SCCM Agent Check Report
           ========================
-          Total Reachable Servers: {{ sccm_results | difference(unreachable_servers) | length }}
-          Servers with SCCM Agent: {{ servers_with_agent | length }}
-          Servers without SCCM Agent: {{ servers_without_agent | length }}
-          Unreachable Servers: {{ unreachable_servers | length }}
+          Total Reachable Servers: {{ total_reachable }}
+          Servers with SCCM Agent: {{ total_with_agent }}
+          Servers without SCCM Agent: {{ total_without_agent }}
+          Unreachable Servers: {{ total_unreachable }}
 
           List of Servers without SCCM Agent:
           -----------------------------------
@@ -60,7 +63,7 @@
 
           List of Unreachable Servers:
           ----------------------------
-          {% for server in unreachable_servers %}
+          {% for server in servers_unreachable %}
           {{ server }}
           {% endfor %}
 
