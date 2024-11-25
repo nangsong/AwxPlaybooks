@@ -1,0 +1,77 @@
+---
+- name: Check Critical/Security Updates and Generate Report
+  hosts: all
+  gather_facts: no
+  vars:
+    cutoff_date: "2024-10-01"  # Default value for the cutoff date
+  tasks:
+    - name: Check for critical and security updates since the given date
+      win_shell: |
+        $CutoffDate = Get-Date "{{ cutoff_date }}"
+        $Updates = Get-WmiObject -Class "Win32_QuickFixEngineering" |
+                   Where-Object { $_.InstalledOn -ne $null -and (Get-Date $_.InstalledOn) -ge $CutoffDate }
+        if ($Updates) {
+            Write-Output "Compliant"
+        } else {
+            Write-Output "Non-Compliant"
+        }
+      register: update_status
+      ignore_errors: true
+
+    - name: Record update status per host
+      set_fact:
+        update_status_fact: "{{ update_status.stdout | default('Unreachable') | trim }}"
+      when: update_status is defined and update_status.stdout is defined
+
+- name: Generate Update Compliance Summary
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Initialize summary data
+      set_fact:
+        total_reachable: 0
+        total_non_compliant: 0
+        total_unreachable: 0
+        servers_non_compliant: []
+        servers_unreachable: []
+
+    - name: Process update statuses from all servers
+      set_fact:
+        total_reachable: "{{ total_reachable | int + (1 if hostvars[item].update_status_fact != 'Unreachable' else 0) }}"
+        total_non_compliant: "{{ total_non_compliant | int + (1 if hostvars[item].update_status_fact == 'Non-Compliant' else 0) }}"
+        total_unreachable: "{{ total_unreachable | int + (1 if hostvars[item].update_status_fact == 'Unreachable' else 0) }}"
+        servers_non_compliant: "{{ servers_non_compliant + ([item] if hostvars[item].update_status_fact == 'Non-Compliant' else []) }}"
+        servers_unreachable: "{{ servers_unreachable + ([item] if hostvars[item].update_status_fact == 'Unreachable' else []) }}"
+      with_items: "{{ groups['all'] }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Prepare report content
+      set_fact:
+        update_report_content: |
+          Update Compliance Report
+          =========================
+          Cutoff Date: {{ cutoff_date }}
+          =====================================
+          Total Reachable Servers: {{ total_reachable }}
+          Non-Compliant Servers: {{ total_non_compliant }}
+          Unreachable Servers: {{ total_unreachable }}
+
+          List of Non-Compliant Servers:
+          ------------------------------
+          {% for server in servers_non_compliant %}
+          {{ server }}
+          {% endfor %}
+
+          List of Unreachable Servers:
+          ----------------------------
+          {% for server in servers_unreachable %}
+          {{ server }}
+          {% endfor %}
+
+    - name: Write summary report on VM01
+      win_copy:
+        content: "{{ update_report_content }}"
+        dest: C:\update_compliance_summary.txt
+      delegate_to: "{{ report_server }}"
+      run_once: true

@@ -71,5 +71,5 @@
       win_copy:
         content: "{{ sccm_report_content }}"
         dest: C:\sccm_summary.txt
-      delegate_to: VM01
+      delegate_to: "{{ report_server }}"
       run_once: true
