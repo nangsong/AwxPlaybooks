@@ -1,0 +1,57 @@
+---
+- name: Collect uptime information from all Windows servers
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Get system uptime using PowerShell
+      ansible.windows.win_shell: |
+        $os = Get-WmiObject -Class Win32_OperatingSystem
+        $lastBootTime = $os.ConvertToDateTime($os.LastBootUpTime)
+        $uptime = (Get-Date) - $lastBootTime
+        [PSCustomObject]@{
+            ServerName = $env:COMPUTERNAME
+            LastBootTime = $lastBootTime
+            UptimeDays = $uptime.Days
+        } | ConvertTo-Json
+      register: uptime_info
+
+    - name: Collect uptime information from all servers
+      set_fact:
+        all_servers_uptime: "{{ all_servers_uptime | default([]) + [uptime_info.stdout | from_json] }}"
+
+- name: Generate consolidated report on serv01
+  hosts: serv01
+  gather_facts: no
+  tasks:
+    - name: Ensure report directory exists on serv01
+      ansible.windows.win_file:
+        path: C:\Reports
+        state: directory
+
+    - name: Write consolidated report to file on serv01
+      ansible.windows.win_copy:
+        content: |
+          Consolidated Uptime Report - Servers not rebooted in the last 30 days:
+          {% for server in hostvars['localhost'].all_servers_uptime %}
+          - Server: {{ server.ServerName }}
+            Last Boot Time: {{ server.LastBootTime }}
+            Uptime (Days): {{ server.UptimeDays }}
+          {% endfor %}
+        dest: C:\Reports\windows_uptime_report_consolidated.txt
+      when: hostvars['localhost'].all_servers_uptime is defined and hostvars['localhost'].all_servers_uptime | length > 0
+
+    - name: Display consolidated report
+      debug:
+        msg: |
+          Consolidated Uptime Report - Servers not rebooted in the last 30 days:
+          {% for server in hostvars['localhost'].all_servers_uptime %}
+          - Server: {{ server.ServerName }}
+            Last Boot Time: {{ server.LastBootTime }}
+            Uptime (Days): {{ server.UptimeDays }}
+          {% endfor %}
+      when: hostvars['localhost'].all_servers_uptime is defined and hostvars['localhost'].all_servers_uptime | length > 0
+
+    - name: No servers found not rebooted in the last 30 days
+      debug:
+        msg: "All servers have been rebooted within the last 30 days."
+      when: hostvars['localhost'].all_servers_uptime is not defined or hostvars['localhost'].all_servers_uptime | length == 0
