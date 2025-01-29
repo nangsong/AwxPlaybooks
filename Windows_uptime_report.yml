@@ -2,6 +2,17 @@
 - name: Collect uptime information from all Windows servers
   hosts: all
   gather_facts: no
+  vars:
+    report_path: "C:\\windows_uptime_report_consolidated.csv"
+    relay_1: 10.211.58.10
+    relay_2: 10.211.122.10
+    port_cc: 6025
+    source_email: ITS-ATCSDevelopers-All@bank-banque-canada.ca
+    #destination_email_success: nanh@bank-banque-canada.ca
+    destination_email_success: WindowsServerSupport@bank-banque-canada.ca
+    subject_email_success: WINDOWS CLUSTERS HEALTH CHECK
+    hostname: "{{ inventory_hostname }}"  # Added hostname variable
+ 
   tasks:
     - name: Get system uptime using PowerShell
       ansible.windows.win_shell: |
@@ -17,41 +28,38 @@
 
     - name: Collect uptime information from all servers
       set_fact:
-        all_servers_uptime: "{{ all_servers_uptime | default([]) + [uptime_info.stdout | from_json] }}"
+        server_uptime: "{{ uptime_info.stdout | from_json }}"
 
-- name: Generate consolidated report on serv01
-  hosts: serv01
-  gather_facts: no
-  tasks:
-    - name: Ensure report directory exists on serv01
-      ansible.windows.win_file:
-        path: C:\Reports
-        state: directory
+    - name: Get Windows version from registry
+      ansible.windows.win_shell: |
+        reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v "ProductName"
+      register: win_version
 
-    - name: Write consolidated report to file on serv01
-      ansible.windows.win_copy:
-        content: |
-          Consolidated Uptime Report - Servers not rebooted in the last 30 days:
-          {% for server in hostvars['localhost'].all_servers_uptime %}
-          - Server: {{ server.ServerName }}
-            Last Boot Time: {{ server.LastBootTime }}
-            Uptime (Days): {{ server.UptimeDays }}
-          {% endfor %}
-        dest: C:\Reports\windows_uptime_report_consolidated.txt
-      when: hostvars['localhost'].all_servers_uptime is defined and hostvars['localhost'].all_servers_uptime | length > 0
+    - name: Determine Windows Server version
+      set_fact:
+        windows_server_version: >
+          {% if '2022' in win_version.stdout %}
+            Windows Server 2022
+          {% elif '2019' in win_version.stdout %}
+            Windows Server 2019
+          {% elif '2016' in win_version.stdout %}
+            Windows Server 2016
+          {% elif '2012' in win_version.stdout %}
+            Windows Server 2012
+          {% else %}
+            Unknown version
+          {% endif %}
 
-    - name: Display consolidated report
-      debug:
-        msg: |
-          Consolidated Uptime Report - Servers not rebooted in the last 30 days:
-          {% for server in hostvars['localhost'].all_servers_uptime %}
-          - Server: {{ server.ServerName }}
-            Last Boot Time: {{ server.LastBootTime }}
-            Uptime (Days): {{ server.UptimeDays }}
-          {% endfor %}
-      when: hostvars['localhost'].all_servers_uptime is defined and hostvars['localhost'].all_servers_uptime | length > 0
+    - name: Create report file
+      win_lineinfile:
+        path: "{{ report_path }}"
+        line: "SERVER NAME, OS VERSION, UPTIME(Days)"
+        create: yes
+      delegate_to: "{{ report_server }}" 
+      run_once: yes
 
-    - name: No servers found not rebooted in the last 30 days
-      debug:
-        msg: "All servers have been rebooted within the last 30 days."
-      when: hostvars['localhost'].all_servers_uptime is not defined or hostvars['localhost'].all_servers_uptime | length == 0
+    - name: Write consolidated report to file
+      win_lineinfile:
+        path: "{{ report_path }}"
+        line: "{{ inventory_hostname }}, {{ windows_server_version }}, {{ server_uptime.UptimeDays }}"
+      delegate_to: "{{ report_server }}"
