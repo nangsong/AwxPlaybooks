@@ -4,15 +4,7 @@
   gather_facts: no
   vars:
     report_path: "C:\\windows_uptime_report_consolidated.csv"
-    relay_1: 10.211.58.10
-    relay_2: 10.211.122.10
-    port_cc: 6025
-    source_email: ITS-ATCSDevelopers-All@bank-banque-canada.ca
-    #destination_email_success: nanh@bank-banque-canada.ca
-    destination_email_success: WindowsServerSupport@bank-banque-canada.ca
-    subject_email_success: WINDOWS CLUSTERS HEALTH CHECK
-    hostname: "{{ inventory_hostname }}"  # Added hostname variable
- 
+   
   tasks:
     - name: Get system uptime using PowerShell
       ansible.windows.win_shell: |
