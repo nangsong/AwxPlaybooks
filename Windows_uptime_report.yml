@@ -1,57 +1,67 @@
 ---
-- name: Collect uptime information from all Windows servers
+- name: Collect, aggregate, and email Windows Server uptime report
   hosts: all
   gather_facts: no
   vars:
     report_path: "C:\\windows_uptime_report_consolidated.csv"
-   
+
   tasks:
-    - name: Get system uptime using PowerShell
+    - name: Get system uptime and Windows version using PowerShell
       ansible.windows.win_shell: |
         $os = Get-WmiObject -Class Win32_OperatingSystem
         $lastBootTime = $os.ConvertToDateTime($os.LastBootUpTime)
         $uptime = (Get-Date) - $lastBootTime
+        $winVersion = (Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name ProductName).ProductName
         [PSCustomObject]@{
             ServerName = $env:COMPUTERNAME
-            LastBootTime = $lastBootTime
+            OSVersion = $winVersion
             UptimeDays = $uptime.Days
         } | ConvertTo-Json
-      register: uptime_info
+      register: server_info
 
-    - name: Collect uptime information from all servers
+    - name: Collect data for HTML report
       set_fact:
-        server_uptime: "{{ uptime_info.stdout | from_json }}"
+        html_row: "<tr><td>{{ inventory_hostname }}</td><td>{{ (server_info.stdout | from_json).OSVersion }}</td><td>{{ (server_info.stdout | from_json).UptimeDays }}</td></tr>"
 
-    - name: Get Windows version from registry
-      ansible.windows.win_shell: |
-        reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v "ProductName"
-      register: win_version
-
-    - name: Determine Windows Server version
+    - name: Aggregate HTML rows
       set_fact:
-        windows_server_version: >
-          {% if '2022' in win_version.stdout %}
-            Windows Server 2022
-          {% elif '2019' in win_version.stdout %}
-            Windows Server 2019
-          {% elif '2016' in win_version.stdout %}
-            Windows Server 2016
-          {% elif '2012' in win_version.stdout %}
-            Windows Server 2012
-          {% else %}
-            Unknown version
-          {% endif %}
+        html_rows: "{{ html_rows | default('') }}{{ html_row }}"
+      run_once: true
+      delegate_to: localhost
+      delegate_facts: true
 
-    - name: Create report file
-      win_lineinfile:
-        path: "{{ report_path }}"
-        line: "SERVER NAME, OS VERSION, UPTIME(Days)"
-        create: yes
-      delegate_to: "{{ report_server }}" 
-      run_once: yes
+    - name: Construct and send HTML email report
+      run_once: true
+      delegate_to: localhost
+      tasks:
+        - name: Construct HTML email body
+          ansible.builtin.set_fact:
+            email_body: |
+              <html>
+              <body>
+              <h2>Windows Server Uptime Report</h2>
+              <table style="border-collapse: collapse; width: 100%;" border="1">
+                <thead>
+                  <tr style="background-color: #f2f2f2;">
+                    <th style="padding: 8px; text-align: left;">Server Name</th>
+                    <th style="padding: 8px; text-align: left;">OS Version</th>
+                    <th style="padding: 8px; text-align: left;">Uptime (Days)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{ hostvars.localhost.html_rows }}
+                </tbody>
+              </table>
+              </body>
+              </html>
 
-    - name: Write consolidated report to file
-      win_lineinfile:
-        path: "{{ report_path }}"
-        line: "{{ inventory_hostname }}, {{ windows_server_version }}, {{ server_uptime.UptimeDays }}"
-      delegate_to: "{{ report_server }}"
+        - name: Send email
+          community.general.mail:
+            host: smtp.example.com  # Change to your SMTP server
+            port: 587
+            username: your_email@example.com  # Change to your email
+            password: your_password  # Consider using a vault instead of plaintext
+            to: recipient@example.com  # Change to recipient email
+            subject: "Windows Server Uptime Report"
+            subtype: html
+            body: "{{ email_body }}"
