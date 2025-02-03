@@ -1,0 +1,45 @@
+---
+- name: Install Security and Critical Patches on Windows Servers
+  hosts: windows_servers
+  gather_facts: no
+  tasks:
+    - name: Install security and critical updates (suppress reboot)
+      win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+        state: installed
+        reboot: no
+      register: update_result
+
+    - name: Display update results
+      debug:
+        var: update_result
+
+
+---
+- name: Install Multiple Specific KB Patches on Windows Servers
+  hosts: windows_servers
+  gather_facts: no
+  vars:
+    kb_numbers: "{{ kb_ids }}"  # List of KB numbers passed as a parameter
+  tasks:
+    - name: Install specific KB patches (suppress reboot)
+      win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+          - DefinitionUpdates
+        state: installed
+        reboot: no
+        blacklist:
+          - "{{ item }}"
+      loop: "{{ kb_numbers }}"
+      when: kb_numbers is defined
+      register: update_result
+
+    - name: Display update results
+      debug:
+        var: update_result
+
+
