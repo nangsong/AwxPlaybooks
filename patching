@@ -43,3 +43,20 @@
         var: update_result
 
 
+
+---
+- name: Reboot Windows Server
+  hosts: windows_servers
+  gather_facts: no
+  tasks:
+    - name: Reboot the server
+      win_reboot:
+        reboot_timeout: 600  # Wait up to 10 minutes for the server to come back online
+      register: reboot_result
+
+    - name: Display reboot results
+      debug:
+        var: reboot_result
+
+
+
