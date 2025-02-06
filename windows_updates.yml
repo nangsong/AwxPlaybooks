@@ -12,6 +12,18 @@
         msg: "Please provide the 'update_month' and 'update_year' as parameters."
       when: update_month is not defined or update_year is not defined
 
+    - name: Install PSWindowsUpdate module
+      win_shell: |
+        if (-not (Get-Module -ListAvailable -Name PSWindowsUpdate)) {
+          Install-Module -Name PSWindowsUpdate -Force -Scope AllUsers
+        }
+        Import-Module PSWindowsUpdate
+      register: install_pswindowsupdate
+
+    - name: Debug PSWindowsUpdate installation
+      debug:
+        var: install_pswindowsupdate.stdout
+
     - name: Get updates released in the specified month and year
       win_shell: |
         $month = {{ update_month }}
