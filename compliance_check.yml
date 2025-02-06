@@ -1,0 +1,83 @@
+---
+- name: Check Windows Server Compliance
+  hosts: windows_servers
+  gather_facts: no
+  vars:
+    cutover_date: "2023-10-01"  # Set your cutover date here
+    smtp_server: "smtp.yourdomain.com"
+    smtp_port: 587
+    email_from: "ansible@yourdomain.com"
+    email_to: "admin@yourdomain.com"
+    email_subject: "Windows Server Compliance Report"
+  
+  tasks:
+    - name: Check if updates are installed after the cutover date
+      win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+          - UpdateRollups
+          - FeaturePacks
+          - ServicePacks
+          - DefinitionUpdates
+          - Tools
+          - Updates
+          - Guidance
+        state: installed
+        log_path: C:\ansible_wu.log
+      register: updates_result
+
+    - name: Determine compliance based on cutover date
+      set_fact:
+        is_compliant: "{{ updates_result.found_update_count > 0 and updates_result.installed_updates | selectattr('installed_date', 'ge', cutover_date) | list | length > 0 }}"
+  
+  post_tasks:
+    - name: Gather compliance results
+      set_fact:
+        compliance_results: "{{ compliance_results | default([]) + [{'host': inventory_hostname, 'compliant': is_compliant}] }}"
+  
+    - name: Compile compliance report
+      set_fact:
+        unreachable_servers: "{{ play_hosts | difference(play_hosts | intersect(ansible_play_hosts_all)) | length }}"
+        compliant_servers: "{{ compliance_results | selectattr('compliant', 'equalto', true) | list | length }}"
+        non_compliant_servers: "{{ compliance_results | selectattr('compliant', 'equalto', false) | list | length }}"
+        non_compliant_list: "{{ compliance_results | selectattr('compliant', 'equalto', false) | map(attribute='host') | list }}"
+  
+    - name: Generate HTML table for non-compliant servers
+      set_fact:
+        non_compliant_table: |
+          <table border="1" cellpadding="5" cellspacing="0">
+            <tr>
+              <th>Non-Compliant Servers</th>
+            </tr>
+            {% for server in non_compliant_list %}
+            <tr>
+              <td>{{ server }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+  
+    - name: Send email report with HTML table
+      community.general.mail:
+        host: "{{ smtp_server }}"
+        port: "{{ smtp_port }}"
+        to: "{{ email_to }}"
+        subject: "{{ email_subject }}"
+        subtype: html
+        body: |
+          <html>
+            <body>
+              <h2>Compliance Report</h2>
+              <p><strong>Unreachable Servers:</strong> {{ unreachable_servers }}</p>
+              <p><strong>Compliant Servers:</strong> {{ compliant_servers }}</p>
+              <p><strong>Non-Compliant Servers:</strong> {{ non_compliant_servers }}</p>
+              <h3>List of Non-Compliant Servers:</h3>
+              {{ non_compliant_table }}
+            </body>
+          </html>
+        from: "{{ email_from }}"
+        secure: starttls
+        username: "your_smtp_username"
+        password: "your_smtp_password"
+      delegate_to: localhost
+      run_once: yes
