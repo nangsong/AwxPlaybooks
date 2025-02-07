@@ -6,5 +6,4 @@
   tasks:
     - name: Connectivity Test - Ping
       ansible.windows.win_ping:
-      register: ping_Result
- 
+      register: ping_Res
