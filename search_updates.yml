@@ -1,0 +1,39 @@
+---
+- name: Search for Windows Updates and Log Them
+  hosts: all
+  gather_facts: no
+  vars:
+    patch_dir: "C:\\Windows_patches"
+    current_month: "{{ ansible_date_time.month }}"
+    current_year: "{{ ansible_date_time.year }}"
+    log_file: "{{ patch_dir }}\\wu_{{ '%02d' % current_month | int }}_{{ current_year }}.txt"
+
+  tasks:
+    - name: Ensure patch directory exists
+      win_file:
+        path: "{{ patch_dir }}"
+        state: directory
+
+    - name: Search for updates
+      win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+          - DefinitionUpdates
+          - UpdateRollups
+        state: searched
+      register: updates
+
+    - name: Log found updates to file
+      win_copy:
+        content: |
+          Found Updates:
+          {% for update in updates.updates %}
+          - Title: {{ update.title }}, KB: {{ update.kb }}
+          {% endfor %}
+        dest: "{{ log_file }}"
+      when: updates.updates | length > 0
+
+    - name: Display log file path
+      debug:
+        msg: "Updates logged to {{ log_file }}"
