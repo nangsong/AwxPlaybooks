@@ -29,7 +29,7 @@
         content: |
           Found Updates:
           {% for update in updates.updates %}
-          - Title: {{ update.title }}, KB: {{ update.kb }}
+          - Title: {{ update.title }}, KB: {{ update.kb[0] if update.kb else 'N/A' }}
           {% endfor %}
         dest: "{{ log_file }}"
       when: updates.updates | length > 0
@@ -37,84 +37,3 @@
     - name: Display log file path
       debug:
         msg: "Updates logged to {{ log_file }}"
-
-
-
-        ########################################################################################
-        {
-  "changed": false,
-  "reboot_required": false,
-  "rebooted": false,
-  "found_update_count": 3,
-  "failed_update_count": 0,
-  "installed_update_count": 0,
-  "updates": {
-    "601c5cdb-59a2-46f9-b9bd-dff3b010870c": {
-      "title": "2025-01 Cumulative Update for Windows Server 2019 for x64-based Systems (KB5050008)",
-      "kb": [
-        "5050008"
-      ],
-      "categories": [
-        "Security Updates",
-        "Windows Server 2019"
-      ],
-      "id": "601c5cdb-59a2-46f9-b9bd-dff3b010870c",
-      "downloaded": false,
-      "installed": false
-    },
-    "bd0d4b6b-286c-49b9-b0bf-7d1b106416a4": {
-      "title": "2025-01 Cumulative Update for .NET Framework 3.5, 4.7.2 and 4.8 for Windows Server 2019 for x64 (KB5050182)",
-      "kb": [
-        "5050182"
-      ],
-      "categories": [
-        "Security Updates",
-        "Windows Server 2019"
-      ],
-      "id": "bd0d4b6b-286c-49b9-b0bf-7d1b106416a4",
-      "downloaded": false,
-      "installed": false
-    },
-    "bdaab34a-fb09-4a7e-a130-4dc032ae012a": {
-      "title": "Windows Malicious Software Removal Tool x64 - v5.131 (KB890830)",
-      "kb": [
-        "890830"
-      ],
-      "categories": [
-        "Update Rollups",
-        "Windows Server 2016",
-        "Windows Server 2019"
-      ],
-      "id": "bdaab34a-fb09-4a7e-a130-4dc032ae012a",
-      "downloaded": false,
-      "installed": false
-    }
-  },
-  "filtered_updates": {},
-  "invocation": {
-    "module_args": {
-      "reboot_timeout": 1200,
-      "category_names": [
-        "SecurityUpdates",
-        "CriticalUpdates",
-        "DefinitionUpdates",
-        "UpdateRollups"
-      ],
-      "reboot": false,
-      "server_selection": "default",
-      "accept_list": null,
-      "state": "searched",
-      "use_scheduled_task": false,
-      "reject_list": null,
-      "skip_optional": false,
-      "log_path": null
-    }
-  },
-  "_ansible_no_log": null
-}
-
-
-###############################
-
-TASK [Log found updates to file] ***********************************************
-fatal: [FCD9WLAKERN01]: FAILED! => {"msg": "The task includes an option with an undefined variable. The error was: 'ansible.utils.unsafe_proxy.AnsibleUnsafeText object' has no attribute 'kb'. 'ansible.utils.unsafe_proxy.AnsibleUnsafeText object' has no attribute 'kb'\n\nThe error appears to be in '/runner/project/search_WU.yml': line 27, column 7, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n\n    - name: Log found updates to file\n      ^ here\n"}
