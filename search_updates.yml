@@ -28,7 +28,7 @@
       win_copy:
         content: |
           Found Updates:
-          {% for update in updates.updates %}
+          {% for update_id, update in updates.updates.items() %}
           - Title: {{ update.title }}, KB: {{ update.kb[0] if update.kb else 'N/A' }}
           {% endfor %}
         dest: "{{ log_file }}"
