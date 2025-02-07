@@ -1,7 +1,42 @@
 ---
-- name: Windows Updates Installation and Reporting
-  hosts: all  
-  #ignore_errors: yes
-  gather_facts: yes
-  roles:
-    - WindowsUpdates
+- name: Install Windows Updates from Logged File
+  hosts: all
+  gather_facts: no
+  vars:
+    patch_dir: "C:\\Windows_patches"
+    log_file: "{{ patch_dir }}\\{{ log_filename }}" # log_filename is passed as a parameter
+
+  tasks:
+    - name: Read KBs from the log file
+      win_shell: |
+        Get-Content -Path "{{ log_file }}" | Where-Object { $_ -match 'KB: (\d+)' } | ForEach-Object { $matches[1] }
+      register: kbs
+
+    - name: Extract KB numbers
+      set_fact:
+        kbs_to_install: "{{ kbs.stdout_lines | map('trim') | list }}"
+
+    - name: Install updates using extracted KBs
+      win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+          - DefinitionUpdates
+          - UpdateRollups
+        kb: "{{ kbs_to_install }}"
+        state: installed
+      register: installed_updates
+
+    - name: Log installed updates
+      win_copy:
+        content: |
+          Installed Updates:
+          {% for update in installed_updates.updates %}
+          - Title: {{ update.title }}, KB: {{ update.kb[0] if update.kb else 'N/A' }}
+          {% endfor %}
+        dest: "{{ log_file }}"
+      when: installed_updates.updates | length > 0
+
+    - name: Reboot if required
+      win_reboot:
+      when: installed_updates.reboot_required
