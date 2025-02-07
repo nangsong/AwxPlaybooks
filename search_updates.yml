@@ -37,3 +37,8 @@
     - name: Display log file path
       debug:
         msg: "Updates logged to {{ log_file }}"
+
+
+        ##########################
+        TASK [Log found updates to file] ***********************************************
+fatal: [FCD9WLAKERN01]: FAILED! => {"msg": "The task includes an option with an undefined variable. The error was: {{ patch_dir }}\\wu_{{ '%02d' % current_month | int }}_{{ current_year }}.txt: {{ ansible_date_time.month }}: 'ansible_date_time' is undefined. 'ansible_date_time' is undefined. {{ ansible_date_time.month }}: 'ansible_date_time' is undefined. 'ansible_date_time' is undefined. {{ patch_dir }}\\wu_{{ '%02d' % current_month | int }}_{{ current_year }}.txt: {{ ansible_date_time.month }}: 'ansible_date_time' is undefined. 'ansible_date_time' is undefined. {{ ansible_date_time.month }}: 'ansible_date_time' is undefined. 'ansible_date_time' is undefined\n\nThe error appears to be in '/runner/project/search_WU.yml': line 27, column 7, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n\n    - name: Log found updates to file\n      ^ here\n"}
