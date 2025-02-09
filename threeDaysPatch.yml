@@ -1,0 +1,53 @@
+---
+- name: Check OS Installation Date and Install Updates if Necessary
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Get OS Installation Date using PowerShell
+      ansible.windows.win_shell: |
+        Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty InstallDate
+      register: os_install_date
+
+    - name: Get Current Date using PowerShell
+      ansible.windows.win_shell: |
+        Get-Date -Format "yyyy-MM-dd"
+      register: current_date
+
+    - name: Convert OS Installation Date to a usable format
+      set_fact:
+        os_install_date_parsed: "{{ os_install_date.stdout | regex_replace('T.*', '') }}"
+
+    - name: Debug OS Installation Date
+      debug:
+        msg: "OS Installation Date: {{ os_install_date_parsed }}"
+
+    - name: Debug Current Date
+      debug:
+        msg: "Current Date: {{ current_date.stdout }}"
+
+    - name: Calculate the difference in days between OS Installation Date and Current Date
+      set_fact:
+        date_diff: "{{ ((current_date.stdout | to_datetime('%Y-%m-%d')) - (os_install_date_parsed | to_datetime('%Y-%m-%d'))).days }}"
+
+    - name: Debug Date Difference
+      debug:
+        msg: "Date Difference: {{ date_diff }} days"
+
+    - name: Install Updates if OS Installation Date is 3 days or less from Current Date
+      block:
+        - name: Install Security, Critical, Rollup, and Updates
+          ansible.windows.win_updates:
+            category_names:
+              - SecurityUpdates
+              - CriticalUpdates
+              - UpdateRollups
+              - Updates
+            state: installed
+          when: date_diff <= 3
+
+      when: date_diff <= 3
+
+    - name: Skip Updates if OS Installation Date is more than 3 days from Current Date
+      debug:
+        msg: "Skipping updates because the OS installation date is more than 3 days old."
+      when: date_diff > 3
