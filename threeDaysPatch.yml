@@ -24,9 +24,17 @@
           - "OS Installation Date: {{ os_install_date_parsed }}"
           - "Current Date: {{ current_date_parsed }}"
 
+    - name: Parse OS Installation Date into a consistent format
+      set_fact:
+        os_install_date_formatted: "{{ os_install_date_parsed | regex_replace('(\\d{2})/(\\d{2})/(\\d{4}).*', '\\3-\\1-\\2') }}"
+
+    - name: Debug Formatted OS Installation Date
+      debug:
+        msg: "Formatted OS Installation Date: {{ os_install_date_formatted }}"
+
     - name: Calculate the difference in days between OS Installation Date and Current Date
       set_fact:
-        date_diff: "{{ ((current_date_parsed | to_datetime('%Y-%m-%d')) - (os_install_date_parsed | to_datetime('%Y-%m-%d'))).days }}"
+        date_diff: "{{ ((current_date_parsed | to_datetime('%Y-%m-%d')) - (os_install_date_formatted | to_datetime('%Y-%m-%d'))).days }}"
 
     - name: Debug Date Difference
       debug:
