@@ -1,0 +1,33 @@
+---
+- name: Compare the content of two files
+  hosts: localhost
+  gather_facts: no
+  vars:
+    file1: /path/to/first/file.txt
+    file2: /path/to/second/file.txt
+
+  tasks:
+    - name: Read the content of the first file
+      slurp:
+        path: "{{ file1 }}"
+      register: file1_content
+
+    - name: Read the content of the second file
+      slurp:
+        path: "{{ file2 }}"
+      register: file2_content
+
+    - name: Decode the content of the first file
+      set_fact:
+        file1_text: "{{ file1_content.content | b64decode }}"
+
+    - name: Decode the content of the second file
+      set_fact:
+        file2_text: "{{ file2_content.content | b64decode }}"
+
+    - name: Compare the content of the two files
+      assert:
+        that:
+          - file1_text == file2_text
+        fail_msg: "The contents of {{ file1 }} and {{ file2 }} are not the same."
+        success_msg: "The contents of {{ file1 }} and {{ file2 }} are the same."
