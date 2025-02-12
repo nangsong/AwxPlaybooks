@@ -1,7 +1,0 @@
----
-- name: AD Account Provisioning
-  gather_facts: false
-  hosts: all
-
-  roles:
-    - accountProvision

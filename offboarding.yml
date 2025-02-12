@@ -1,7 +1,0 @@
----
-- name: Offboarding Users
-  hosts: all
-  gather_facts: no
-  
-  roles:
-    - affboarding
