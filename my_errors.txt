@@ -1,2 +1,2 @@
 TASK [Add folders to Windows Defender exclusions] ******************************
-fatal: [fcl1wnetmls02]: FAILED! => {"msg": "Invalid data passed to 'loop', it requires a list, got this instead: C:\\hermal. Hint: If you passed a list/dict of just one element, try adding wantlist=True to your lookup invocation or use q/query instead of lookup."}
+fatal: [fcl1wnetmls]: FAILED! => {"msg": "Invalid data passed to 'loop', it requires a list, got this instead: C:\\hermann\nC:\\Gael. Hint: If you passed a list/dict of just one element, try adding wantlist=True to your lookup invocation or use q/query instead of lookup."}
