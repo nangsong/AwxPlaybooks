@@ -1,37 +1,41 @@
 ---
-- hosts: all 
+- hosts: all
   gather_facts: yes
   tasks:
-    - name: Creating folder
+    - name: Create folder for MDE update
       win_file:
-        path: C:\mdeupdate\  
+        path: C:\mdeupdate\
         state: directory
       no_log: true
 
-    - name: Copy agent files to server
-      ansible.windows.win_copy:
-        src: \\FCQ4WSCCMDP01\mde_update\
-        dest: C:\mdeupdate\
-        remote_src: true
-      no_log: false
-      when: ('bocqa' in ansible_nodename) and ('9W' not in ansible_hostname)
+    - name: Determine the correct source path for agent files
+      set_fact:
+        source_path: >-
+          {% if 'bocqa' in ansible_nodename and '9W' in ansible_hostname %}
+            \\FCQ9WSCCMDP01\mde_update\
+          {% elif 'bocqa' in ansible_nodename %}
+            \\FCQ4WSCCMDP01\mde_update\
+          {% else %}
+            skip
+          {% endif %}
 
     - name: Copy agent files to server
       ansible.windows.win_copy:
-        src: \\FCQ9WSCCMDP01\mde_update\
+        src: "{{ source_path }}"
         dest: C:\mdeupdate\
         remote_src: true
       no_log: false
-      when: ('bocqa' in ansible_nodename) and ('9W' in ansible_hostname)
-      
-    
+      when: source_path != 'skip'
+
     - name: Run the agent installation command
       win_command: mde_update.exe
       args:
-        chdir: 'C:\mdeupdate'
+        chdir: C:\mdeupdate\
+      when: source_path != 'skip'
 
-    - name: Delete the local CBSP directory
+    - name: Delete the local MDE update directory
       win_file:
         path: C:\mdeupdate\
         state: absent
       no_log: true
+      when: source_path != 'skip'
