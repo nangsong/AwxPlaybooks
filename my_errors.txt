@@ -4,15 +4,7 @@
       $RegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
       $OS = Get-WmiObject Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
       $Ansible.Changed = $false
-      $Ansible.Result = @{
-        "Name" = $null
-        "Version" = $null
-        "InstallDate" = $null
-        "OSName" = $OS.Caption
-        "BuildNumber" = $OS.BuildNumber
-        "OSVersion" = $OS.Version
-        "ServerName" = $env:computername
-      }
+      $results = @()  # Initialize an empty array to store results
 
       # Extract and filter registry content
       try {
@@ -20,13 +12,23 @@
           ForEach-Object {
             $props = Get-ItemProperty $_.PsPath
             if ($props.DisplayName -like "*Findur*") {
-              $Ansible.Result["Name"] = $props.DisplayName
-              $Ansible.Result["Version"] = $props.DisplayVersion
-              $Ansible.Result["InstallDate"] = $props.InstallDate
+              $result = @{
+                "Name" = $props.DisplayName
+                "Version" = $props.DisplayVersion
+                "InstallDate" = $props.InstallDate
+                "OSName" = $OS.Caption
+                "BuildNumber" = $OS.BuildNumber
+                "OSVersion" = $OS.Version
+                "ServerName" = $env:computername
+              }
+              $results += $result  # Add the result to the array
               $Ansible.Changed = $true
             }
           }
       } catch {
         # Do nothing, result already set to false
       }
+
+      # Output the results as a table (array of objects)
+      $Ansible.Result = $results
   register: myresult
