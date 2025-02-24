@@ -1,83 +1,37 @@
 ---
-- name: Gather software information from multiple servers
-  hosts: windows_servers  # Replace with your Windows server group
-  gather_facts: no
+- hosts: all 
+  gather_facts: yes
   tasks:
-    - name: Run PowerShell to generate report
-      ansible.windows.win_powershell:
-        script: |
-          $RegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-          $OS = Get-WmiObject Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
-          $results = @()  # Initialize an empty array to store results
+    - name: Creating folder
+      win_file:
+        path: C:\mdeupdate\  
+        state: directory
+      no_log: true
 
-          # Extract and filter registry content
-          try {
-            Get-ChildItem -Path $RegistryPath | 
-              ForEach-Object {
-                $props = Get-ItemProperty $_.PsPath
-                if ($props.DisplayName -like "*Findur*") {
-                  $result = @{
-                    "Name" = $props.DisplayName
-                    "Version" = $props.DisplayVersion
-                    "InstallDate" = $props.InstallDate
-                    "OSName" = $OS.Caption
-                    "BuildNumber" = $OS.BuildNumber
-                    "OSVersion" = $OS.Version
-                    "ServerName" = $env:computername
-                  }
-                  $results += $result  # Add the result to the array
-                }
-              }
-          } catch {
-            # Do nothing, result already set to false
-          }
+    - name: Copy agent files to server
+      ansible.windows.win_copy:
+        src: \\FCQ4WSCCMDP01\mde_update\
+        dest: C:\mdeupdate\
+        remote_src: true
+      no_log: false
+      when: ('bocqa' in ansible_nodename) and ('9W' not in ansible_hostname)
 
-          # Output the results as a table (array of objects)
-          $Ansible.Result = $results
-      register: myresult
+    - name: Copy agent files to server
+      ansible.windows.win_copy:
+        src: \\FCQ9WSCCMDP01\mde_update\
+        dest: C:\mdeupdate\
+        remote_src: true
+      no_log: false
+      when: ('bocqa' in ansible_nodename) and ('9W' in ansible_hostname)
+      
+    
+    - name: Run the agent installation command
+      win_command: mde_update.exe
+      args:
+        chdir: 'C:\mdeupdate'
 
-    - name: Set fact to store results for consolidation
-      set_fact:
-        consolidated_results: "{{ consolidated_results | default([]) + myresult.result }}"
-
-- name: Consolidate results and send email
-  hosts: localhost  # Run this on the Ansible control machine
-  gather_facts: no
-  tasks:
-    - name: Format results as an HTML table
-      set_fact:
-        html_table: |
-          <table border="1">
-            <tr>
-              <th>Server Name</th>
-              <th>Name</th>
-              <th>Version</th>
-              <th>Install Date</th>
-              <th>OS Name</th>
-              <th>OS Version</th>
-              <th>Build Number</th>
-            </tr>
-            {% for item in consolidated_results %}
-            <tr>
-              <td>{{ item.ServerName }}</td>
-              <td>{{ item.Name }}</td>
-              <td>{{ item.Version }}</td>
-              <td>{{ item.InstallDate }}</td>
-              <td>{{ item.OSName }}</td>
-              <td>{{ item.OSVersion }}</td>
-              <td>{{ item.BuildNumber }}</td>
-            </tr>
-            {% endfor %}
-          </table>
-
-    - name: Send email with consolidated results
-      community.general.mail:
-        host: smtp.example.com  # Replace with your SMTP server
-        port: 587  # Replace with your SMTP port
-        username: your_username  # Replace with your SMTP username
-        password: your_password  # Replace with your SMTP password
-        to: recipient@example.com  # Replace with the recipient's email
-        subject: "Consolidated Software Report"
-        body: "{{ html_table }}"
-        subtype: html
-      delegate_to: localhost
+    - name: Delete the local CBSP directory
+      win_file:
+        path: C:\mdeupdate\
+        state: absent
+      no_log: true
