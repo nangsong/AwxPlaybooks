@@ -1,32 +1,32 @@
-    - name: Run powershell to generate report
-      ansible.windows.win_powershell:
-        script: |
-          $RegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-          $OS = Get-WmiObject Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
-           $Ansible.Changed = $false
-          $Ansible.Result = @{
-            "Name" = $false
-            "Version" = $null
-            "InstallDate" = $null
-            "OSName"= $null
-            "BuildNumber" = $null
-            "OSVersion" = $null
-            "ServerName" = $null
+- name: Run PowerShell to generate report
+  ansible.windows.win_powershell:
+    script: |
+      $RegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+      $OS = Get-WmiObject Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
+      $Ansible.Changed = $false
+      $Ansible.Result = @{
+        "Name" = $null
+        "Version" = $null
+        "InstallDate" = $null
+        "OSName" = $OS.Caption
+        "BuildNumber" = $OS.BuildNumber
+        "OSVersion" = $OS.Version
+        "ServerName" = $env:computername
+      }
+
+      # Extract and filter registry content
+      try {
+        Get-ChildItem -Path $RegistryPath | 
+          ForEach-Object {
+            $props = Get-ItemProperty $_.PsPath
+            if ($props.DisplayName -like "*Findur*") {
+              $Ansible.Result["Name"] = $props.DisplayName
+              $Ansible.Result["Version"] = $props.DisplayVersion
+              $Ansible.Result["InstallDate"] = $props.InstallDate
+              $Ansible.Changed = $true
+            }
           }
-          # Extract and filter registry content
-          try{
-            Get-ChildItem -Path $RegistryPath | 
-              ForEach-Object {
-                $props = Get-ItemProperty $_.PsPath
-                $Ansible.Result["Name"] = $props.DisplayName
-                $Ansible.Result["Version"] = $props.DisplayVersion
-                $Ansible.Result["InstallDate"] = $props.InstallDate
-                $Ansible.Result["OSName"]= $OS.Caption
-                $Ansible.Result["BuildNumber"] = $OS.BuildNumber
-                $Ansible.Result["OSVersion"] = $OS.Version
-                $Ansible.Result["ServerName"] = $env:computername
-              }| here-Object { $_.Name -like "*Findur*" }
-          } catch {
-            # Do nothing, result already set to false
-          }
-      register: myresult
+      } catch {
+        # Do nothing, result already set to false
+      }
+  register: myresult
