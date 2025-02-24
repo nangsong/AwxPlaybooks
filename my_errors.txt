@@ -1,2 +1,32 @@
-TASK [Add folders to Windows Defender exclusions] ******************************
-fatal: [fcl1wnetmls]: FAILED! => {"msg": "Invalid data passed to 'loop', it requires a list, got this instead: C:\\hermann\nC:\\Gael. Hint: If you passed a list/dict of just one element, try adding wantlist=True to your lookup invocation or use q/query instead of lookup."}
+    - name: Run powershell to generate report
+      ansible.windows.win_powershell:
+        script: |
+          $RegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+          $OS = Get-WmiObject Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
+           $Ansible.Changed = $false
+          $Ansible.Result = @{
+            "Name" = $false
+            "Version" = $null
+            "InstallDate" = $null
+            "OSName"= $null
+            "BuildNumber" = $null
+            "OSVersion" = $null
+            "ServerName" = $null
+          }
+          # Extract and filter registry content
+          try{
+            Get-ChildItem -Path $RegistryPath | 
+              ForEach-Object {
+                $props = Get-ItemProperty $_.PsPath
+                $Ansible.Result["Name"] = $props.DisplayName
+                $Ansible.Result["Version"] = $props.DisplayVersion
+                $Ansible.Result["InstallDate"] = $props.InstallDate
+                $Ansible.Result["OSName"]= $OS.Caption
+                $Ansible.Result["BuildNumber"] = $OS.BuildNumber
+                $Ansible.Result["OSVersion"] = $OS.Version
+                $Ansible.Result["ServerName"] = $env:computername
+              }| here-Object { $_.Name -like "*Findur*" }
+          } catch {
+            # Do nothing, result already set to false
+          }
+      register: myresult
