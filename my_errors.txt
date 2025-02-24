@@ -1,34 +1,83 @@
-- name: Run PowerShell to generate report
-  ansible.windows.win_powershell:
-    script: |
-      $RegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-      $OS = Get-WmiObject Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
-      $Ansible.Changed = $false
-      $results = @()  # Initialize an empty array to store results
+---
+- name: Gather software information from multiple servers
+  hosts: windows_servers  # Replace with your Windows server group
+  gather_facts: no
+  tasks:
+    - name: Run PowerShell to generate report
+      ansible.windows.win_powershell:
+        script: |
+          $RegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+          $OS = Get-WmiObject Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
+          $results = @()  # Initialize an empty array to store results
 
-      # Extract and filter registry content
-      try {
-        Get-ChildItem -Path $RegistryPath | 
-          ForEach-Object {
-            $props = Get-ItemProperty $_.PsPath
-            if ($props.DisplayName -like "*Findur*") {
-              $result = @{
-                "Name" = $props.DisplayName
-                "Version" = $props.DisplayVersion
-                "InstallDate" = $props.InstallDate
-                "OSName" = $OS.Caption
-                "BuildNumber" = $OS.BuildNumber
-                "OSVersion" = $OS.Version
-                "ServerName" = $env:computername
+          # Extract and filter registry content
+          try {
+            Get-ChildItem -Path $RegistryPath | 
+              ForEach-Object {
+                $props = Get-ItemProperty $_.PsPath
+                if ($props.DisplayName -like "*Findur*") {
+                  $result = @{
+                    "Name" = $props.DisplayName
+                    "Version" = $props.DisplayVersion
+                    "InstallDate" = $props.InstallDate
+                    "OSName" = $OS.Caption
+                    "BuildNumber" = $OS.BuildNumber
+                    "OSVersion" = $OS.Version
+                    "ServerName" = $env:computername
+                  }
+                  $results += $result  # Add the result to the array
+                }
               }
-              $results += $result  # Add the result to the array
-              $Ansible.Changed = $true
-            }
+          } catch {
+            # Do nothing, result already set to false
           }
-      } catch {
-        # Do nothing, result already set to false
-      }
 
-      # Output the results as a table (array of objects)
-      $Ansible.Result = $results
-  register: myresult
+          # Output the results as a table (array of objects)
+          $Ansible.Result = $results
+      register: myresult
+
+    - name: Set fact to store results for consolidation
+      set_fact:
+        consolidated_results: "{{ consolidated_results | default([]) + myresult.result }}"
+
+- name: Consolidate results and send email
+  hosts: localhost  # Run this on the Ansible control machine
+  gather_facts: no
+  tasks:
+    - name: Format results as an HTML table
+      set_fact:
+        html_table: |
+          <table border="1">
+            <tr>
+              <th>Server Name</th>
+              <th>Name</th>
+              <th>Version</th>
+              <th>Install Date</th>
+              <th>OS Name</th>
+              <th>OS Version</th>
+              <th>Build Number</th>
+            </tr>
+            {% for item in consolidated_results %}
+            <tr>
+              <td>{{ item.ServerName }}</td>
+              <td>{{ item.Name }}</td>
+              <td>{{ item.Version }}</td>
+              <td>{{ item.InstallDate }}</td>
+              <td>{{ item.OSName }}</td>
+              <td>{{ item.OSVersion }}</td>
+              <td>{{ item.BuildNumber }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+
+    - name: Send email with consolidated results
+      community.general.mail:
+        host: smtp.example.com  # Replace with your SMTP server
+        port: 587  # Replace with your SMTP port
+        username: your_username  # Replace with your SMTP username
+        password: your_password  # Replace with your SMTP password
+        to: recipient@example.com  # Replace with the recipient's email
+        subject: "Consolidated Software Report"
+        body: "{{ html_table }}"
+        subtype: html
+      delegate_to: localhost
