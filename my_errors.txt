@@ -40,17 +40,21 @@
 
     - name: Set fact to store results for consolidation
       set_fact:
-        consolidated_results: "{{ consolidated_results | default({}) | combine({ inventory_hostname: myresult.result }) }}"
+        consolidated_results: "{{ consolidated_results | default([]) + myresult.result }}"
 
 - name: Consolidate results and send email
   hosts: localhost  # Run this on the Ansible control machine
   gather_facts: no
   tasks:
-    - name: Sort results for each server by InstallDate in descending order
+    - name: Sort consolidated results by InstallDate in descending order
       set_fact:
-        sorted_results: >-
+        sorted_results: "{{ consolidated_results | sort(attribute='InstallDate', reverse=true) }}"
+
+    - name: Group sorted results by server
+      set_fact:
+        grouped_results: >-
           {{
-            consolidated_results | dict2items | map('value') | map('sort', attribute='InstallDate', reverse=true) | list
+            sorted_results | groupby('ServerName') | map('reverse') | list
           }}
 
     - name: Format results as an HTML table with server separation
@@ -66,13 +70,13 @@
               <th>OS Version</th>
               <th>Build Number</th>
             </tr>
-            {% for server_results in sorted_results %}
+            {% for server, results in grouped_results %}
             <tr>
               <td colspan="7" style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
-                Server: {{ server_results[0].ServerName }}
+                Server: {{ server }}
               </td>
             </tr>
-            {% for item in server_results %}
+            {% for item in results %}
             <tr>
               <td>{{ item.ServerName }}</td>
               <td>{{ item.Name }}</td>
@@ -97,15 +101,3 @@
         body: "{{ html_table }}"
         subtype: html
       delegate_to: localhost
-
-
-
-
-------------------------------------------
-
-
-{
-  "changed": false,
-  "_ansible_no_log": false,
-  "exception": "Traceback (most recent call last):\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 491, in __getitem__\n    func = self._delegatee[key]\nKeyError: 'value'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.9/site-packages/ansible/executor/task_executor.py\", line 533, in _execute\n    self._task.post_validate(templar=templar)\n  File \"/usr/lib/python3.9/site-packages/ansible/playbook/task.py\", line 290, in post_validate\n    super(Task, self).post_validate(templar)\n  File \"/usr/lib/python3.9/site-packages/ansible/playbook/base.py\", line 543, in post_validate\n    value = method(attribute, getattr(self, name), templar)\n  File \"/usr/lib/python3.9/site-packages/ansible/playbook/task.py\", line 298, in _post_validate_args\n    args = templar.template(value)\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 797, in template\n    d[k] = self.template(\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 771, in template\n    result = self.do_template(\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 1015, in do_template\n    res = myenv.concat(rf)\n  File \"/usr/lib/python3.9/site-packages/ansible/template/native_helpers.py\", line 43, in ansible_eval_concat\n    head = list(islice(nodes, 2))\n  File \"<template>\", line 30, in root\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 297, in wrapper\n    return list(ret)\n  File \"/usr/lib/python3.9/site-packages/jinja2/filters.py\", line 1468, in sync_do_map\n    yield func(item)\n  File \"/usr/lib/python3.9/site-packages/jinja2/filters.py\", line 1712, in func\n    return context.environment.call_filter(\n  File \"/usr/lib/python3.9/site-packages/jinja2/environment.py\", line 564, in call_filter\n    return self._filter_test_common(\n  File \"/usr/lib/python3.9/site-packages/jinja2/environment.py\", line 510, in _filter_test_common\n    func = env_map.get(name)  # type: ignore\n  File \"/usr/lib64/python3.9/_collections_abc.py\", line 763, in get\n    return self[key]\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 494, in __getitem__\n    raise TemplateSyntaxError('Could not load \"%s\": %s' % (key, to_native(original_exc or e)), 0)\njinja2.exceptions.TemplateSyntaxError: Could not load \"value\": 'value'\n  line 0\n"
-}
