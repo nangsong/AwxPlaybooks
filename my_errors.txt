@@ -40,17 +40,20 @@
 
     - name: Set fact to store results for consolidation
       set_fact:
-        consolidated_results: "{{ consolidated_results | default([]) + myresult.result }}"
+        consolidated_results: "{{ consolidated_results | default({}) | combine({ inventory_hostname: myresult.result }) }}"
 
 - name: Consolidate results and send email
   hosts: localhost  # Run this on the Ansible control machine
   gather_facts: no
   tasks:
-    - name: Sort consolidated results by InstallDate in descending order
+    - name: Sort results for each server by InstallDate in descending order
       set_fact:
-        sorted_results: "{{ consolidated_results | sort(attribute='InstallDate', reverse=true) }}"
+        sorted_results: >-
+          {{
+            consolidated_results | dict2items | map('value') | map('sort', attribute='InstallDate', reverse=true) | list
+          }}
 
-    - name: Format sorted results as an HTML table
+    - name: Format results as an HTML table with server separation
       set_fact:
         html_table: |
           <table border="1">
@@ -63,7 +66,13 @@
               <th>OS Version</th>
               <th>Build Number</th>
             </tr>
-            {% for item in sorted_results %}
+            {% for server_results in sorted_results %}
+            <tr>
+              <td colspan="7" style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
+                Server: {{ server_results[0].ServerName }}
+              </td>
+            </tr>
+            {% for item in server_results %}
             <tr>
               <td>{{ item.ServerName }}</td>
               <td>{{ item.Name }}</td>
@@ -73,6 +82,7 @@
               <td>{{ item.OSVersion }}</td>
               <td>{{ item.BuildNumber }}</td>
             </tr>
+            {% endfor %}
             {% endfor %}
           </table>
 
