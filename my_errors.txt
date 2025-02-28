@@ -1,5 +1,5 @@
 ---
-- name: Gather software information from multiple servers
+- name: Gather software information from multiple servers and send consolidated email
   hosts: windows_servers  # Replace with your Windows server group
   gather_facts: no
   tasks:
@@ -36,19 +36,19 @@
 
           # Output the results as a table (array of objects)
           $Ansible.Result = $results
-      register: myresult
+      register: myresult  # Store the results in the variable `myresult`
 
-    - name: Set fact to store results for consolidation
+    - name: Collect results from all servers
       set_fact:
-        consolidated_results: "{{ consolidated_results | default([]) + myresult.result }}"
+        all_results: "{{ hostvars | dict2items | map(attribute='value.myresult.result') | sum(start=[]) }}"
+      run_once: true  # Run this task only once
+      delegate_to: localhost
 
-- name: Consolidate results and send email
-  hosts: localhost  # Run this on the Ansible control machine
-  gather_facts: no
-  tasks:
-    - name: Sort consolidated results by InstallDate in descending order
+    - name: Sort all results by InstallDate in descending order
       set_fact:
-        sorted_results: "{{ consolidated_results | sort(attribute='InstallDate', reverse=true) }}"
+        sorted_results: "{{ all_results | sort(attribute='InstallDate', reverse=true) }}"
+      run_once: true  # Run this task only once
+      delegate_to: localhost
 
     - name: Group sorted results by server
       set_fact:
@@ -56,6 +56,8 @@
           {{
             sorted_results | groupby('ServerName') | map('reverse') | list
           }}
+      run_once: true  # Run this task only once
+      delegate_to: localhost
 
     - name: Format results as an HTML table with server separation
       set_fact:
@@ -89,6 +91,8 @@
             {% endfor %}
             {% endfor %}
           </table>
+      run_once: true  # Run this task only once
+      delegate_to: localhost
 
     - name: Send email with consolidated results
       community.general.mail:
@@ -100,4 +104,5 @@
         subject: "Consolidated Software Report"
         body: "{{ html_table }}"
         subtype: html
+      run_once: true  # Run this task only once
       delegate_to: localhost
