@@ -40,7 +40,7 @@
 
     - name: Collect results from all servers
       set_fact:
-        all_results: "{{ hostvars | dict2items | map(attribute='value.myresult.result') | sum(start=[]) }}"
+        all_results: "{{ hostvars | dict2items | selectattr('value.myresult', 'defined') | map(attribute='value.myresult.result') | sum(start=[]) }}"
       run_once: true  # Run this task only once
       delegate_to: localhost
 
