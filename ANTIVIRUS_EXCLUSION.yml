@@ -16,7 +16,7 @@
         (ansible_date_time.weekday == 'Monday' and 'Mon' in exclusion_schedule) or
         (ansible_date_time.weekday == 'Tuesday' and 'Tue' in exclusion_schedule) or
         (ansible_date_time.weekday == 'Wednesday' and 'Wed' in exclusion_schedule) or
-        (ansible_date_time.weekday == 'Thursday' and 'Thu' in exclusion_schedule) or
+        (ansible_date_time.weekday == 'Thursdapy' and 'Thu' in exclusion_schedule) or
         (ansible_date_time.weekday == 'Friday' and 'Fri' in exclusion_schedule)
 
     - name: Remove folders from Windows Defender exclusions on weekends
