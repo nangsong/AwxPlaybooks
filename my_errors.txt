@@ -1,108 +1,73 @@
 ---
-- name: Gather software information from multiple servers and send consolidated email
-  hosts: windows_servers  # Replace with your Windows server group
+- name: Scan disks on Windows servers and generate a report
+  hosts: windows_servers
   gather_facts: no
   tasks:
-    - name: Run PowerShell to generate report
-      ansible.windows.win_powershell:
-        script: |
-          $RegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-          $OS = Get-WmiObject Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
-          $results = @()  # Initialize an empty array to store results
+    - name: Gather disk facts from Windows servers
+      community.windows.win_disk_facts:
+      register: disk_facts
 
-          # Extract and filter registry content
-          try {
-            Get-ChildItem -Path $RegistryPath | 
-              ForEach-Object {
-                $props = Get-ItemProperty $_.PsPath
-                if ($props.DisplayName -like "*Findur*") {
-                  # Format InstallDate as yyyy-MM-dd
-                  $installDate = [datetime]::ParseExact($props.InstallDate, 'yyyyMMdd', $null).ToString('yyyy-MM-dd')
-                  $result = @{
-                    "Name" = $props.DisplayName
-                    "Version" = $props.DisplayVersion
-                    "InstallDate" = $installDate
-                    "OSName" = $OS.Caption
-                    "BuildNumber" = $OS.BuildNumber
-                    "OSVersion" = $OS.Version
-                    "ServerName" = $env:computername
-                  }
-                  $results += $result  # Add the result to the array
-                }
-              }
-          } catch {
-            # Do nothing, result already set to false
-          }
-
-          # Output the results as a table (array of objects)
-          $Ansible.Result = $results
-      register: myresult  # Store the results in the variable `myresult`
-
-    - name: Collect results from all servers
+    - name: Filter disks with free space ≤ 10GB
       set_fact:
-        all_results: "{{ hostvars | dict2items | selectattr('value.myresult', 'defined') | map(attribute='value.myresult.result') | sum(start=[]) }}"
-      run_once: true  # Run this task only once
-      delegate_to: localhost
-
-    - name: Sort all results by InstallDate in descending order
-      set_fact:
-        sorted_results: "{{ all_results | sort(attribute='InstallDate', reverse=true) }}"
-      run_once: true  # Run this task only once
-      delegate_to: localhost
-
-    - name: Group sorted results by server
-      set_fact:
-        grouped_results: >-
+        low_free_space_disks: >-
           {{
-            sorted_results | groupby('ServerName') | map('reverse') | list
+            low_free_space_disks | default([]) + [{
+              'server_name': inventory_hostname,
+              'disk_size_gb': (item.size / 1GB) | round(2),
+              'free_space_gb': (item.size_remaining / 1GB) | round(2),
+              'percentage_free': ((item.size_remaining / item.size) * 100) | round(2)
+            }}]
           }}
-      run_once: true  # Run this task only once
-      delegate_to: localhost
+      loop: "{{ disk_facts.disks }}"
+      when: (item.size_remaining / 1GB) <= 10
 
-    - name: Format results as an HTML table with server separation
+- name: Generate HTML report and send email
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Generate HTML report
       set_fact:
-        html_table: |
-          <table border="1">
-            <tr>
-              <th>Server Name</th>
-              <th>Name</th>
-              <th>Version</th>
-              <th>Install Date</th>
-              <th>OS Name</th>
-              <th>OS Version</th>
-              <th>Build Number</th>
-            </tr>
-            {% for server, results in grouped_results %}
-            <tr>
-              <td colspan="7" style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
-                Server: {{ server }}
-              </td>
-            </tr>
-            {% for item in results %}
-            <tr>
-              <td>{{ item.ServerName }}</td>
-              <td>{{ item.Name }}</td>
-              <td>{{ item.Version }}</td>
-              <td>{{ item.InstallDate }}</td>
-              <td>{{ item.OSName }}</td>
-              <td>{{ item.OSVersion }}</td>
-              <td>{{ item.BuildNumber }}</td>
-            </tr>
-            {% endfor %}
-            {% endfor %}
-          </table>
-      run_once: true  # Run this task only once
-      delegate_to: localhost
+        html_report: >-
+          <html>
+            <head>
+              <style>
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid black; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+              </style>
+            </head>
+            <body>
+              <h2>Low Disk Space Report</h2>
+              <table>
+                <tr>
+                  <th>Server Name</th>
+                  <th>Disk Size (GB)</th>
+                  <th>Free Space (GB)</th>
+                  <th>Percentage Free</th>
+                </tr>
+                {% for server in hostvars %}
+                  {% if hostvars[server].low_free_space_disks is defined %}
+                    {% for disk in hostvars[server].low_free_space_disks %}
+                      <tr>
+                        <td>{{ disk.server_name }}</td>
+                        <td>{{ disk.disk_size_gb }}</td>
+                        <td>{{ disk.free_space_gb }}</td>
+                        <td>{{ disk.percentage_free }}%</td>
+                      </tr>
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+              </table>
+            </body>
+          </html>
 
-    - name: Send email with consolidated results
+    - name: Send email with the HTML report
       community.general.mail:
-        host: smtp.example.com  # Replace with your SMTP server
-        port: 587  # Replace with your SMTP port
-        username: your_username  # Replace with your SMTP username
-        password: your_password  # Replace with your SMTP password
-        to: recipient@example.com  # Replace with the recipient's email
-        subject: "Consolidated Software Report"
-        body: "{{ html_table }}"
+        host: "smtp.example.com"
+        port: 587
+        username: "your_email@example.com"
+        password: "your_password"
+        to: "recipient@example.com"
+        subject: "Low Disk Space Report"
+        body: "{{ html_report }}"
         subtype: html
-      run_once: true  # Run this task only once
-      delegate_to: localhost
