@@ -1,258 +1,81 @@
-{
-  "changed": false,
-  "invocation": {
-    "module_args": {
-      "filter": [
-        "physical_disk",
-        "virtual_disk",
-        "win32_disk_drive",
-        "partitions",
-        "volumes"
-      ]
-    }
-  },
-  "ansible_facts": {
-    "ansible_disks": [
-      {
-        "clustered": false,
-        "friendly_name": "VMware Virtual disk",
-        "number": 0,
-        "sector_size": 512,
-        "unique_id": "6000C29EFC9A9E562E5F0E2D6D5759D6",
-        "partition_count": 5,
-        "win32_disk_drive": {
-          "availability": null,
-          "scsi_logical_unit": 0,
-          "creation_class_name": "Win32_DiskDrive",
-          "default_block_size": null,
-          "scsi_target_id": 0,
-          "scsi_bus": 0,
-          "compression_method": null,
-          "interface_type": "SCSI",
-          "manufacturer": "(Standard disk drives)",
-          "status": "OK",
-          "config_manager_user_config": false,
-          "config_manager_error_code": 0,
-          "pnp_device_id": "SCSI\\DISK&VEN_VMWARE&PROD_VIRTUAL_DISK\\5&1EC51BF7&0&000000",
-          "total_heads": 255,
-          "error_description": null,
-          "status_info": null,
-          "total_sectors": 146785905,
-          "error_cleared": null,
-          "sectors_per_track": 63,
-          "bytes_per_sector": 512,
-          "name": "\\\\.\\PHYSICALDRIVE0",
-          "power_management_capabilities": null,
-          "error_methodology": null,
-          "min_block_size": null,
-          "caption": "VMware Virtual disk SCSI Disk Device",
-          "max_media_size": null,
-          "firmware_revision": "2.0 ",
-          "install_date": null,
-          "description": "Disk drive",
-          "model": "VMware Virtual disk SCSI Disk Device",
-          "system_name": "FCL1WDYNATS01",
-          "power_management_supported": null,
-          "device_id": "\\\\.\\PHYSICALDRIVE0",
-          "signature": null,
-          "media_type": "Fixed hard disk media",
-          "number_of_media_supported": null,
-          "capabilities": [
-            3,
-            4
-          ],
-          "serial_number": "6000c29efc9a9e562e5f0e2d6d5759d6",
-          "tracks_per_cylinder": 255,
-          "total_tracks": 2329935,
-          "capability_descriptions": [
-            "Random Access",
-            "Supports Writing"
-          ],
-          "media_loaded": true,
-          "partitions": 4,
-          "total_cylinders": 9137,
-          "size": 75154383360,
-          "scsi_port": 0,
-          "needs_cleaning": null,
-          "index": 0,
-          "last_error_code": null,
-          "max_block_size": null,
-          "system_creation_class_name": "Win32_ComputerSystem"
-        },
-        "manufacturer": "VMware  ",
-        "system_disk": true,
-        "operational_status": "Online",
-        "partitions": [
-          {
-            "shadow_copy": false,
-            "drive_letter": null,
-            "number": 1,
-            "access_paths": [
-              "\\\\?\\Volume{7a18c6b2-21f7-4f0e-a955-9a1db7c696d0}\\"
-            ],
-            "hidden": false,
-            "offset": 1048576,
-            "transition_state": 1,
-            "type": "Recovery",
-            "size": 523239424,
-            "guid": "{7a18c6b2-21f7-4f0e-a955-9a1db7c696d0}",
-            "no_default_driveletter": true,
-            "volumes": [
-              {
-                "size": 523235328,
-                "allocation_unit_size": 4096,
-                "type": "NTFS",
-                "size_remaining": 120803328,
-                "object_id": "{1}\\\\FCL1WDYNATS01\\root/Microsoft/Windows/Storage/Providers_v2\\WSP_Volume.ObjectId=\"{f1cdf74a-8a2e-11ee-829b-806e6f6e6963}:VO:\\\\?\\Volume{7a18c6b2-21f7-4f0e-a955-9a1db7c696d0}\\\"",
-                "health_status": "Healthy",
-                "label": "Recovery",
-                "path": "\\\\?\\Volume{7a18c6b2-21f7-4f0e-a955-9a1db7c696d0}\\",
-                "drive_type": "Fixed"
-              }
-            ],
-            "gpt_type": "{de94bba4-06d1-4d40-a16a-bfd50179d6ac}"
-          },
-          {
-            "shadow_copy": null,
-            "drive_letter": null,
-            "number": 2,
-            "access_paths": [
-              "\\\\?\\Volume{d419500b-a2d2-44de-ab5b-2981b5412565}\\"
-            ],
-            "hidden": true,
-            "offset": 524288000,
-            "transition_state": 1,
-            "type": "System",
-            "size": 103809024,
-            "guid": "{d419500b-a2d2-44de-ab5b-2981b5412565}",
-            "no_default_driveletter": null,
-            "volumes": [
-              {
-                "size": 99614720,
-                "allocation_unit_size": 1024,
-                "type": "FAT32",
-                "size_remaining": 72430592,
-                "object_id": "{1}\\\\FCL1WDYNATS01\\root/Microsoft/Windows/Storage/Providers_v2\\WSP_Volume.ObjectId=\"{f1cdf74a-8a2e-11ee-829b-806e6f6e6963}:VO:\\\\?\\Volume{d419500b-a2d2-44de-ab5b-2981b5412565}\\\"",
-                "health_status": "Healthy",
-                "label": "",
-                "path": "\\\\?\\Volume{d419500b-a2d2-44de-ab5b-2981b5412565}\\",
-                "drive_type": "Fixed"
-              }
-            ],
-            "gpt_type": "{c12a7328-f81f-11d2-ba4b-00a0c93ec93b}"
-          },
-          {
-            "no_default_driveletter": null,
-            "hidden": true,
-            "type": "Unknown",
-            "size": 262144,
-            "offset": 628097024,
-            "number": 5,
-            "guid": "{f5efd660-deb3-11ed-8296-0050569e2606}",
-            "drive_letter": null,
-            "shadow_copy": null,
-            "gpt_type": "{caddebf1-4400-4de8-b103-12117dcf3ccf}",
-            "access_paths": null,
-            "transition_state": 1
-          },
-          {
-            "no_default_driveletter": null,
-            "hidden": true,
-            "type": "Reserved",
-            "size": 16515072,
-            "offset": 628359168,
-            "number": 3,
-            "guid": "{48771da5-5e83-46c4-b908-8cf573aad8fb}",
-            "drive_letter": null,
-            "shadow_copy": null,
-            "gpt_type": "{e3c9e316-0b5c-4db8-817d-f92df00215ae}",
-            "access_paths": null,
-            "transition_state": 1
-          },
-          {
-            "shadow_copy": false,
-            "drive_letter": "C",
-            "number": 4,
-            "access_paths": [
-              "C:\\",
-              "\\\\?\\Volume{1bdec5c3-b868-4a1e-8dc3-062e18c1466f}\\"
-            ],
-            "hidden": false,
-            "offset": 644874240,
-            "transition_state": 1,
-            "type": "Basic",
-            "size": 74516004864,
-            "guid": "{1bdec5c3-b868-4a1e-8dc3-062e18c1466f}",
-            "no_default_driveletter": false,
-            "volumes": [
-              {
-                "size": 74516000768,
-                "allocation_unit_size": 4096,
-                "type": "NTFS",
-                "size_remaining": 53174702080,
-                "object_id": "{1}\\\\FCL1WDYNATS01\\root/Microsoft/Windows/Storage/Providers_v2\\WSP_Volume.ObjectId=\"{f1cdf74a-8a2e-11ee-829b-806e6f6e6963}:VO:\\\\?\\Volume{1bdec5c3-b868-4a1e-8dc3-062e18c1466f}\\\"",
-                "health_status": "Healthy",
-                "label": "",
-                "path": "\\\\?\\Volume{1bdec5c3-b868-4a1e-8dc3-062e18c1466f}\\",
-                "drive_type": "Fixed"
-              }
-            ],
-            "gpt_type": "{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}"
-          }
-        ],
-        "firmware_version": "2.0 ",
-        "guid": "{2f5c450a-65cc-487b-a976-b37cfadfe010}",
-        "model": "Virtual disk    ",
-        "size": 75161927680,
-        "read_only": false,
-        "bus_type": "SAS",
-        "bootable": true,
-        "partition_style": "GPT",
-        "physical_disk": {
-          "manufacturer": "VMware",
-          "operational_status": "OK",
-          "firmware_version": "2.0",
-          "size": 75161927680,
-          "partial": true,
-          "object_id": "{1}\\\\FCL1WDYNATS01\\root/Microsoft/Windows/Storage/Providers_v2\\SPACES_PhysicalDisk.ObjectId=\"{f1cdf74a-8a2e-11ee-829b-806e6f6e6963}:PD:{60e190ef-57ac-5cca-5fed-49ec03fb1d85}\"",
-          "usage_type": "Auto-Select",
-          "media_type": "HDD",
-          "friendly_name": "VMware Virtual disk",
-          "supported_usages": {
-            "value": [
-              "Auto-Select",
-              "Manual-Select",
-              "Hot Spare",
-              "Retired",
-              "Journal"
-            ],
-            "Count": 5
-          },
-          "bus_type": "SAS",
-          "device_id": "0",
-          "can_pool": false,
-          "indication_enabled": null,
-          "unique_id": "6000C29EFC9A9E562E5F0E2D6D5759D6",
-          "serial_number": "6000c29efc9a9e562e5f0e2d6d5759d6",
-          "cannot_pool_reason": "Insufficient Capacity",
-          "allocated_size": 75161927680,
-          "spindle_speed": "Unknown",
-          "model": "Virtual disk",
-          "physical_location": "SCSI0",
-          "health_status": "Healthy"
-        },
-        "serial_number": "6000c29efc9a9e562e5f0e2d6d5759d6",
-        "location": "SCSI0",
-        "path": "\\\\?\\scsi#disk&ven_vmware&prod_virtual_disk#5&1ec51bf7&0&000000#{53f56307-b6bf-11d0-94f2-00a0c91efb8b}"
-      }
-    ]
-  },
-  "_ansible_no_log": false
-}
+---
+- name: Scan C drive on Windows servers and generate a report
+  hosts: windows_servers
+  gather_facts: no
+  tasks:
+    - name: Gather disk facts from Windows servers
+      community.windows.win_disk_facts:
+      register: disk_facts
 
+    - name: Filter C drive and check free space ≤ 10GB
+      set_fact:
+        low_free_space_disks: >-
+          {{
+            low_free_space_disks | default([]) + [{
+              'server_name': inventory_hostname,
+              'disk_size_gb': (item.size / 1GB) | round(2),
+              'free_space_gb': (volume.size_remaining / 1GB) | round(2),
+              'percentage_free': ((volume.size_remaining / item.size) * 100) | round(2)
+            }}]
+          }}
+      loop: "{{ disk_facts.ansible_disks }}"
+      when: >
+        item.partitions is defined
+      vars:
+        volume: >-
+          {{
+            item.partitions | selectattr('drive_letter', 'eq', 'C') | map(attribute='volumes') | first | first
+          }}
+      when: >
+        volume is defined and (volume.size_remaining / 1GB) <= 10
 
-{
-  "msg": "'dict object' has no attribute 'disks'. 'dict object' has no attribute 'disks'",
-  "_ansible_no_log": false
-}
+- name: Generate HTML report and send email
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Generate HTML report
+      set_fact:
+        html_report: >-
+          <html>
+            <head>
+              <style>
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid black; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+              </style>
+            </head>
+            <body>
+              <h2>Low Disk Space Report (C Drive)</h2>
+              <table>
+                <tr>
+                  <th>Server Name</th>
+                  <th>Disk Size (GB)</th>
+                  <th>Free Space (GB)</th>
+                  <th>Percentage Free</th>
+                </tr>
+                {% for server in hostvars %}
+                  {% if hostvars[server].low_free_space_disks is defined %}
+                    {% for disk in hostvars[server].low_free_space_disks %}
+                      <tr>
+                        <td>{{ disk.server_name }}</td>
+                        <td>{{ disk.disk_size_gb }}</td>
+                        <td>{{ disk.free_space_gb }}</td>
+                        <td>{{ disk.percentage_free }}%</td>
+                      </tr>
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+              </table>
+            </body>
+          </html>
 
+    - name: Send email with the HTML report
+      community.general.mail:
+        host: "smtp.example.com"
+        port: 587
+        username: "your_email@example.com"
+        password: "your_password"
+        to: "recipient@example.com"
+        subject: "Low Disk Space Report (C Drive)"
+        body: "{{ html_report }}"
+        subtype: html
