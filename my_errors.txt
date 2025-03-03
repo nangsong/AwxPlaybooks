@@ -3,31 +3,31 @@
   hosts: windows_servers
   gather_facts: no
   tasks:
-    - name: Gather disk facts from Windows servers
-      community.windows.win_disk_facts:
-      register: disk_facts
+    - name: Run PowerShell script to get C drive information
+      ansible.windows.win_shell: |
+        Get-WmiObject -Query "SELECT Size, FreeSpace FROM Win32_LogicalDisk WHERE DeviceID = 'C:'" |
+        Select-Object @{Name='SizeGB'; Expression={[math]::Round($_.Size / 1GB, 2)}},
+                      @{Name='FreeSpaceGB'; Expression={[math]::Round($_.FreeSpace / 1GB, 2)}},
+                      @{Name='PercentageFree'; Expression={[math]::Round(($_.FreeSpace / $_.Size * 100), 2)}} |
+        ConvertTo-Json
+      register: disk_info
 
-    - name: Filter C drive and check free space ≤ 10GB
+    - name: Parse PowerShell output
+      set_fact:
+        c_drive_info: "{{ disk_info.stdout | from_json }}"
+
+    - name: Filter C drive with free space ≤ 10GB
       set_fact:
         low_free_space_disks: >-
           {{
             low_free_space_disks | default([]) + [{
               'server_name': inventory_hostname,
-              'disk_size_gb': (item.size / 1GB) | round(2),
-              'free_space_gb': (volume.size_remaining / 1GB) | round(2),
-              'percentage_free': ((volume.size_remaining / item.size) * 100) | round(2)
+              'disk_size_gb': c_drive_info.SizeGB,
+              'free_space_gb': c_drive_info.FreeSpaceGB,
+              'percentage_free': c_drive_info.PercentageFree
             }}]
           }}
-      loop: "{{ disk_facts.ansible_disks }}"
-      when: >
-        item.partitions is defined
-      vars:
-        volume: >-
-          {{
-            item.partitions | selectattr('drive_letter', 'eq', 'C') | map(attribute='volumes') | first | first
-          }}
-      when: >
-        volume is defined and (volume.size_remaining / 1GB) <= 10
+      when: c_drive_info.FreeSpaceGB <= 10
 
 - name: Generate HTML report and send email
   hosts: localhost
