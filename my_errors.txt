@@ -1,81 +1,87 @@
 ---
-- name: Scan C drive on Windows servers and generate a report
+- name: Check Windows servers for uptime and send report
   hosts: windows_servers
   gather_facts: no
+  vars:
+    report_file: "/tmp/windows_uptime_report.html"
+    email_subject: "Windows Servers Uptime Report (>= 30 Days)"
+    email_to: "admin@example.com"
+    email_from: "ansible@example.com"
+    smtp_server: "smtp.example.com"
+    smtp_port: 587
+    smtp_username: "smtp_user@example.com"
+    smtp_password: "smtp_password"
+    uptime_threshold: 30  # Days
+
   tasks:
-    - name: Run PowerShell script to get C drive information
-      ansible.windows.win_shell: |
-        Get-WmiObject -Query "SELECT Size, FreeSpace FROM Win32_LogicalDisk WHERE DeviceID = 'C:'" |
-        Select-Object @{Name='SizeGB'; Expression={[math]::Round($_.Size / 1GB, 2)}},
-                      @{Name='FreeSpaceGB'; Expression={[math]::Round($_.FreeSpace / 1GB, 2)}},
-                      @{Name='PercentageFree'; Expression={[math]::Round(($_.FreeSpace / $_.Size * 100), 2)}} |
-        ConvertTo-Json
-      register: disk_info
+    - name: Get last boot time from Windows servers
+      win_shell: |
+        $lastBootTime = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime
+        [PSCustomObject]@{
+          Server = $env:COMPUTERNAME
+          LastBootTime = $lastBootTime
+          UptimeDays = [math]::Round((New-TimeSpan -Start $lastBootTime -End (Get-Date)).TotalDays, 2)
+        } | ConvertTo-Json
+      register: boot_time
 
-    - name: Parse PowerShell output
+    - name: Process boot time data
       set_fact:
-        c_drive_info: "{{ disk_info.stdout | from_json }}"
+        server_data: "{{ (server_data | default([])) + [{'Server': item.Server, 'LastBootTime': item.LastBootTime, 'UptimeDays': item.UptimeDays}] }}"
+      loop: "{{ boot_time.stdout_lines | map('from_json') | list }}"
 
-    - name: Filter C drive with free space ≤ 10GB
+    - name: Filter servers with uptime >= {{ uptime_threshold }} days
       set_fact:
-        low_free_space_disks: >-
-          {{
-            low_free_space_disks | default([]) + [{
-              'server_name': inventory_hostname,
-              'disk_size_gb': c_drive_info.SizeGB,
-              'free_space_gb': c_drive_info.FreeSpaceGB,
-              'percentage_free': c_drive_info.PercentageFree
-            }}]
-          }}
-      when: c_drive_info.FreeSpaceGB <= 10
+        filtered_servers: "{{ server_data | selectattr('UptimeDays', '>=', uptime_threshold) }}"
 
-- name: Generate HTML report and send email
-  hosts: localhost
-  gather_facts: no
-  tasks:
     - name: Generate HTML report
-      set_fact:
-        html_report: >-
-          <html>
-            <head>
-              <style>
-                table { width: 100%; border-collapse: collapse; }
-                th, td { border: 1px solid black; padding: 8px; text-align: left; }
-                th { background-color: #f2f2f2; }
-              </style>
-            </head>
-            <body>
-              <h2>Low Disk Space Report (C Drive)</h2>
-              <table>
-                <tr>
-                  <th>Server Name</th>
-                  <th>Disk Size (GB)</th>
-                  <th>Free Space (GB)</th>
-                  <th>Percentage Free</th>
-                </tr>
-                {% for server in hostvars %}
-                  {% if hostvars[server].low_free_space_disks is defined %}
-                    {% for disk in hostvars[server].low_free_space_disks %}
-                      <tr>
-                        <td>{{ disk.server_name }}</td>
-                        <td>{{ disk.disk_size_gb }}</td>
-                        <td>{{ disk.free_space_gb }}</td>
-                        <td>{{ disk.percentage_free }}%</td>
-                      </tr>
-                    {% endfor %}
-                  {% endif %}
-                {% endfor %}
+      delegate_to: localhost
+      run_once: yes
+      block:
+        - name: Create HTML table
+          set_fact:
+            html_table: |
+              <html>
+              <head><title>{{ email_subject }}</title></head>
+              <body>
+              <h2>{{ email_subject }}</h2>
+              <table border="1" cellpadding="5" cellspacing="0">
+              <tr>
+                <th>Server</th>
+                <th>Last Boot Time</th>
+                <th>Uptime (Days)</th>
+              </tr>
+              {% for server in filtered_servers %}
+              <tr>
+                <td>{{ server.Server }}</td>
+                <td>{{ server.LastBootTime }}</td>
+                <td>{{ server.UptimeDays }}</td>
+              </tr>
+              {% endfor %}
               </table>
-            </body>
-          </html>
+              </body>
+              </html>
 
-    - name: Send email with the HTML report
+        - name: Save HTML report to file
+          copy:
+            content: "{{ html_table }}"
+            dest: "{{ report_file }}"
+
+    - name: Send HTML report via email
+      delegate_to: localhost
+      run_once: yes
       community.general.mail:
-        host: "smtp.example.com"
-        port: 587
-        username: "your_email@example.com"
-        password: "your_password"
-        to: "recipient@example.com"
-        subject: "Low Disk Space Report (C Drive)"
-        body: "{{ html_report }}"
+        host: "{{ smtp_server }}"
+        port: "{{ smtp_port }}"
+        username: "{{ smtp_username }}"
+        password: "{{ smtp_password }}"
+        to: "{{ email_to }}"
+        subject: "{{ email_subject }}"
+        body: "{{ html_table }}"
         subtype: html
+      when: filtered_servers | length > 0
+
+    - name: Display servers not rebooted for more than {{ uptime_threshold }} days
+      debug:
+        msg: "Server {{ item.Server }} has not been rebooted for {{ item.UptimeDays }} days."
+      loop: "{{ filtered_servers }}"
+      when: filtered_servers | length > 0
