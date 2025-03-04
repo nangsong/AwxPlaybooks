@@ -1,29 +1,92 @@
-{
-  "start": "2025-03-04 16:19:40.029135",
-  "stdout": "{\r\n    \"Server\":  \"OPL4WDYNAWB02\",\r\n    \"LastBootTime\":  \"\\/Date(1735571049447)\\/\",\r\n    \"UptimeDays\":  64.05\r\n}\r\n",
-  "cmd": "$lastBootTime = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime\n[PSCustomObject]@{\n  Server = $env:COMPUTERNAME\n  LastBootTime = $lastBootTime\n  UptimeDays = [math]::Round((New-TimeSpan -Start $lastBootTime -End (Get-Date)).TotalDays, 2)\n} | ConvertTo-Json",
-  "stderr": "",
-  "changed": true,
-  "rc": 0,
-  "delta": "0:00:00.859471",
-  "end": "2025-03-04 16:19:40.888606",
-  "stdout_lines": [
-    "{",
-    "    \"Server\":  \"OPL4WDYNAWB02\",",
-    "    \"LastBootTime\":  \"\\/Date(1735571049447)\\/\",",
-    "    \"UptimeDays\":  64.05",
-    "}"
-  ],
-  "stderr_lines": [],
-  "_ansible_no_log": false
-}
+---
+- name: Check Windows servers for uptime and send report
+  hosts: windows_servers
+  gather_facts: no
+  vars:
+    report_file: "/tmp/windows_uptime_report.html"
+    email_subject: "Windows Servers Uptime Report (>= 30 Days)"
+    email_to: "admin@example.com"
+    email_from: "ansible@example.com"
+    smtp_server: "smtp.example.com"
+    smtp_port: 587
+    smtp_username: "smtp_user@example.com"
+    smtp_password: "smtp_password"
+    uptime_threshold: 30  # Days
 
+  tasks:
+    - name: Get last boot time from Windows servers
+      win_shell: |
+        $lastBootTime = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime
+        [PSCustomObject]@{
+          Server = $env:COMPUTERNAME
+          LastBootTime = $lastBootTime.ToString("yyyy-MM-dd HH:mm:ss")
+          UptimeDays = [math]::Round((New-TimeSpan -Start $lastBootTime -End (Get-Date)).TotalDays, 2)
+        } | ConvertTo-Json
+      register: boot_time
 
+    - name: Debug boot_time output
+      debug:
+        var: boot_time.stdout
 
+    - name: Parse JSON output
+      set_fact:
+        server_data: "{{ (server_data | default([])) + [item] }}"
+      loop: "{{ boot_time.stdout | from_json }}"
+      when: boot_time.stdout is defined and boot_time.stdout | trim != ''
 
-{
-  "msg": "Unexpected failure during module execution: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)",
-  "exception": "Traceback (most recent call last):\n  File \"/usr/lib/python3.9/site-packages/ansible/executor/task_executor.py\", line 112, in run\n    items = self._get_loop_items()\n  File \"/usr/lib/python3.9/site-packages/ansible/executor/task_executor.py\", line 251, in _get_loop_items\n    items = templar.template(self._task.loop)\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 771, in template\n    result = self.do_template(\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 1015, in do_template\n    res = myenv.concat(rf)\n  File \"/usr/lib/python3.9/site-packages/ansible/template/native_helpers.py\", line 43, in ansible_eval_concat\n    head = list(islice(nodes, 2))\n  File \"<template>\", line 24, in root\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 297, in wrapper\n    return list(ret)\n  File \"/usr/lib/python3.9/site-packages/jinja2/filters.py\", line 1508, in sync_do_map\n    yield func(item)\n  File \"/usr/lib/python3.9/site-packages/jinja2/filters.py\", line 1750, in func\n    return context.environment.call_filter(\n  File \"/usr/lib/python3.9/site-packages/jinja2/environment.py\", line 569, in call_filter\n    return self._filter_test_common(\n  File \"/usr/lib/python3.9/site-packages/jinja2/environment.py\", line 550, in _filter_test_common\n    return func(*args, **kwargs)\n  File \"/usr/lib/python3.9/site-packages/ansible/template/__init__.py\", line 295, in wrapper\n    ret = func(*args, **kwargs)\n  File \"/usr/lib64/python3.9/json/__init__.py\", line 346, in loads\n    return _default_decoder.decode(s)\n  File \"/usr/lib64/python3.9/json/decoder.py\", line 337, in decode\n    obj, end = self.raw_decode(s, idx=_w(s, 0).end())\n  File \"/usr/lib64/python3.9/json/decoder.py\", line 353, in raw_decode\n    obj, end = self.scan_once(s, idx)\njson.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\n",
-  "stdout": "",
-  "_ansible_no_log": false
-}
+    - name: Filter servers with uptime >= {{ uptime_threshold }} days
+      set_fact:
+        filtered_servers: "{{ server_data | selectattr('UptimeDays', '>=', uptime_threshold) }}"
+
+    - name: Generate HTML report
+      delegate_to: localhost
+      run_once: yes
+      block:
+        - name: Create HTML table
+          set_fact:
+            html_table: |
+              <html>
+              <head><title>{{ email_subject }}</title></head>
+              <body>
+              <h2>{{ email_subject }}</h2>
+              <table border="1" cellpadding="5" cellspacing="0">
+              <tr>
+                <th>Server</th>
+                <th>Last Boot Time</th>
+                <th>Uptime (Days)</th>
+              </tr>
+              {% for server in filtered_servers %}
+              <tr>
+                <td>{{ server.Server }}</td>
+                <td>{{ server.LastBootTime }}</td>
+                <td>{{ server.UptimeDays }}</td>
+              </tr>
+              {% endfor %}
+              </table>
+              </body>
+              </html>
+
+        - name: Save HTML report to file
+          copy:
+            content: "{{ html_table }}"
+            dest: "{{ report_file }}"
+
+    - name: Send HTML report via email
+      delegate_to: localhost
+      run_once: yes
+      community.general.mail:
+        host: "{{ smtp_server }}"
+        port: "{{ smtp_port }}"
+        username: "{{ smtp_username }}"
+        password: "{{ smtp_password }}"
+        to: "{{ email_to }}"
+        subject: "{{ email_subject }}"
+        body: "{{ html_table }}"
+        subtype: html
+      when: filtered_servers | length > 0
+
+    - name: Display servers not rebooted for more than {{ uptime_threshold }} days
+      debug:
+        msg: "Server {{ item.Server }} has not been rebooted for {{ item.UptimeDays }} days."
+      loop: "{{ filtered_servers }}"
+      when: filtered_servers | length > 0
