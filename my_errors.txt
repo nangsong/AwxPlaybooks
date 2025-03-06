@@ -20,17 +20,18 @@
         state: searched
       register: win_updates_result
 
-    - name: Get server uptime using PowerShell
+    - name: Get server uptime in days using PowerShell
       ansible.windows.win_shell: |
-        (Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime
+        [math]::Round(((Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime).TotalDays)
       register: uptime_result
 
-    - name: Parse uptime result to extract days
+    - name: Debug uptime_result
+      debug:
+        var: uptime_result.stdout
+
+    - name: Set uptime_days fact
       set_fact:
-        uptime_days: >-
-          {{
-            uptime_result.stdout | regex_search('Days\\s+:\\s+(\\d+)') | default('0') | int
-          }}
+        uptime_days: "{{ uptime_result.stdout | int }}"
 
     - name: Debug uptime_days
       debug:
