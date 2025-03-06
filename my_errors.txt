@@ -25,6 +25,15 @@
       }}
   when: boot_time.stdout is defined and boot_info.UptimeDays >= uptime_threshold
 
+- name: Calculate total number of servers
+  set_fact:
+    server_count: >-
+      {{
+        (hostvars | dict2items | selectattr('value.server_data', 'defined') | map(attribute='value.server_data') | flatten | length)
+      }}
+  delegate_to: localhost
+  run_once: yes
+
 - name: Create HTML table
   set_fact:
     email_body: >-
@@ -38,6 +47,7 @@
       </head>
       <body>
       <h2>Windows Servers Uptime Report (>= {{ uptime_threshold }} Days)</h2>
+      <p><strong>Total Number of Servers: {{ server_count | default(0) }}</strong></p>
       <table border="1" cellpadding="5" cellspacing="0">
       <tr>
         <th>Server</th>
@@ -60,4 +70,18 @@
       </body>
       </html>
   delegate_to: localhost
-  run_once: yes  
+  run_once: yes
+
+- name: Send HTML report via email
+  delegate_to: localhost
+  run_once: yes
+  community.general.mail:
+    host: "{{ smtp_server }}"
+    port: "{{ smtp_port }}"
+    username: "{{ smtp_username }}"
+    password: "{{ smtp_password }}"
+    to: "{{ email_to }}"
+    subject: "Windows Servers Uptime Report (>= {{ uptime_threshold }} Days)"
+    body: "{{ email_body }}"
+    subtype: html
+  when: server_count is defined and server_count > 0
