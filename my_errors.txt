@@ -25,10 +25,6 @@
         [math]::Round(((Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime).TotalDays)
       register: uptime_result
 
-    - name: Debug uptime_result
-      debug:
-        var: uptime_result.stdout
-
     - name: Set uptime_days fact
       set_fact:
         uptime_days: "{{ uptime_result.stdout | int }}"
@@ -37,19 +33,39 @@
       debug:
         var: uptime_days
 
-    - name: Calculate compliance status
+    - name: Get the last installed security update date
+      set_fact:
+        last_patch_date: >-
+          {{
+            win_updates_result.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | sort | last | default('N/A')
+          }}
+
+    - name: Debug last_patch_date
+      debug:
+        var: last_patch_date
+
+    - name: Calculate days since last patch
+      set_fact:
+        days_since_last_patch: >-
+          {{
+            (now() | to_datetime - (last_patch_date | to_datetime)).days
+            if last_patch_date != 'N/A'
+            else compliance_days + 1
+          }}
+
+    - name: Debug days_since_last_patch
+      debug:
+        var: days_since_last_patch
+
+    - name: Determine compliance status
       set_fact:
         compliance_status: >-
           {{
             {
               'server_name': inventory_hostname,
-              'last_patch_date': win_updates_result.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | sort | last | default('N/A'),
+              'last_patch_date': last_patch_date,
               'uptime_days': uptime_days,
-              'is_compliant': (
-                (win_updates_result.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | sort | last | default('N/A') | to_datetime | date_diff(now(), 'days') <= compliance_days
-              ) and (
-                uptime_days <= max_uptime_days
-              ),
+              'is_compliant': (days_since_last_patch <= compliance_days) and (uptime_days <= max_uptime_days),
               'reason': []
             }
           }}
@@ -60,9 +76,8 @@
           {{
             compliance_status | combine({
               'reason': compliance_status.reason + ['no patch received']
-            }) if (
-              (win_updates_result.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | sort | last | default('N/A') | to_datetime | date_diff(now(), 'days') > compliance_days
-            ) else compliance_status
+            }) if days_since_last_patch > compliance_days
+            else compliance_status
           }}
 
     - name: Add reason for non-compliance (server was not rebooted)
@@ -71,9 +86,8 @@
           {{
             compliance_status | combine({
               'reason': compliance_status.reason + ['server was not rebooted']
-            }) if (
-              uptime_days > max_uptime_days
-            ) else compliance_status
+            }) if uptime_days > max_uptime_days
+            else compliance_status
           }}
 
     - name: Collect non-compliant servers
