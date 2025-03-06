@@ -1,100 +1,63 @@
 ---
-- name: Windows Server Compliance Check
-  hosts: windows_servers
-  gather_facts: no
-  vars:
-    compliance_days: 15
-    max_uptime_days: 6
-    smtp_server: "smtp.example.com"
-    smtp_port: 587
-    smtp_username: "your_email@example.com"
-    smtp_password: "your_password"
-    email_from: "your_email@example.com"
-    email_to: "recipient@example.com"
-    email_subject: "Non-Compliant Windows Servers Report"
+- name: Get last boot time from Windows servers
+  win_shell: |
+    $lastBootTime = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime
+    [PSCustomObject]@{
+      Server = $env:COMPUTERNAME
+      LastBootTime = $lastBootTime.ToString("yyyy-MM-dd HH:mm:ss")
+      UptimeDays = [math]::Round((New-TimeSpan -Start $lastBootTime -End (Get-Date)).TotalDays)
+    } | ConvertTo-Json
+  register: boot_time
 
-  tasks:
-    - name: Get last security update installation date
-      community.windows.win_updates:
-        category_names: SecurityUpdates
-        state: searched
-      register: win_updates_result
+- name: Parse Powershell Output
+  set_fact:
+    boot_info: "{{ boot_time.stdout | from_json }}"
 
-    - name: Get server uptime
-      community.windows.win_uptime:
-      register: uptime_result
+- name: Parse JSON output
+  set_fact:
+    server_data: >-
+      {{
+        server_data | default([]) + [{
+          'Server': boot_info.Server,
+          'LastBootTime': boot_info.LastBootTime,
+          'UptimeDays': boot_info.UptimeDays
+        }]
+      }}
+  when: boot_time.stdout is defined and boot_info.UptimeDays >= uptime_threshold
 
-    - name: Calculate compliance status
-      set_fact:
-        compliance_status: >-
-          {{
-            {
-              'server_name': inventory_hostname,
-              'last_patch_date': win_updates_result.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | sort | last | default('N/A'),
-              'uptime_days': uptime_result.uptime.days,
-              'is_compliant': (
-                (win_updates_result.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | sort | last | default('N/A') | to_datetime | date_diff(now(), 'days') <= compliance_days
-              ) and (
-                uptime_result.uptime.days <= max_uptime_days
-              ),
-              'reason': []
-            }
-          }}
-
-    - name: Add reason for non-compliance (no patch received)
-      set_fact:
-        compliance_status: >-
-          {{
-            compliance_status | combine({
-              'reason': compliance_status.reason + ['no patch received']
-            }) if (
-              (win_updates_result.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | sort | last | default('N/A') | to_datetime | date_diff(now(), 'days') > compliance_days
-            ) else compliance_status
-          }}
-
-    - name: Add reason for non-compliance (server was not rebooted)
-      set_fact:
-        compliance_status: >-
-          {{
-            compliance_status | combine({
-              'reason': compliance_status.reason + ['server was not rebooted']
-            }) if (
-              uptime_result.uptime.days > max_uptime_days
-            ) else compliance_status
-          }}
-
-    - name: Collect non-compliant servers
-      set_fact:
-        non_compliant_servers: >-
-          {{
-            (non_compliant_servers | default([])) + [compliance_status]
-            if not compliance_status.is_compliant
-            else non_compliant_servers | default([])
-          }}
-
-  post_tasks:
-    - name: Generate non-compliant servers report
-      set_fact:
-        report_table: >-
-          {{
-            non_compliant_servers | map(attribute='server_name') | list | zip(
-              non_compliant_servers | map(attribute='reason') | list
-            ) | map('join', ', ') | list | join('\n')
-          }}
-
-    - name: Send email with non-compliant servers report
-      community.general.mail:
-        host: "{{ smtp_server }}"
-        port: "{{ smtp_port }}"
-        username: "{{ smtp_username }}"
-        password: "{{ smtp_password }}"
-        from: "{{ email_from }}"
-        to: "{{ email_to }}"
-        subject: "{{ email_subject }}"
-        body: |
-          Non-Compliant Servers Report:
-          =============================
-          Server Name | Reason
-          ----------- | ------
-          {{ report_table }}
-      when: non_compliant_servers is defined and non_compliant_servers | length > 0
+- name: Create HTML table
+  set_fact:
+    email_body: >-
+      <html>
+      <head>
+        <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color:#288efc; }
+          </style>
+      </head>
+      <body>
+      <h2>Windows Servers Uptime Report (>= {{ uptime_threshold }} Days)</h2>
+      <table border="1" cellpadding="5" cellspacing="0">
+      <tr>
+        <th>Server</th>
+        <th>Last Boot Time</th>
+        <th>Uptime (Days)</th>
+      </tr>
+      {% for server in hostvars %}
+        {% if hostvars[server].server_data is defined %}
+          {% for b_info in hostvars[server].server_data %}
+            <tr>
+              <td>{{ b_info.Server }}</td>
+              <td>{{ b_info.LastBootTime }}</td>
+              <td>{{ b_info.UptimeDays }}</td>
+            </tr>
+          {% endfor %}
+        {% endif%}
+      {% endfor %}
+      </table>
+      <p style="font-size: 12px; color: #999; text-align: center;">This report was generated automatically by Windows Team.</p>
+      </body>
+      </html>
+  delegate_to: localhost
+  run_once: yes  
