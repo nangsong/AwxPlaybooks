@@ -78,14 +78,27 @@
           }}
 
   post_tasks:
-    - name: Generate non-compliant servers report
+    - name: Generate HTML table for non-compliant servers report
       set_fact:
-        report_table: >-
-          {{
-            non_compliant_servers | map(attribute='server_name') | list | zip(
-              non_compliant_servers | map(attribute='reason') | list
-            ) | map('join', ', ') | list | join('\n')
-          }}
+        email_body: >-
+          <html>
+          <body>
+          <h2>Non-Compliant Servers Report</h2>
+          <table border="1">
+            <tr>
+              <th>Server Name</th>
+              <th>Reason</th>
+            </tr>
+            {% for server in non_compliant_servers %}
+            <tr>
+              <td>{{ server.server_name }}</td>
+              <td>{{ server.reason | join(', ') }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+          </body>
+          </html>
+      when: non_compliant_servers is defined and non_compliant_servers | length > 0
 
     - name: Send email with non-compliant servers report
       community.general.mail:
@@ -96,10 +109,6 @@
         from: "{{ email_from }}"
         to: "{{ email_to }}"
         subject: "{{ email_subject }}"
-        body: |
-          Non-Compliant Servers Report:
-          =============================
-          Server Name | Reason
-          ----------- | ------
-          {{ report_table }}
+        subtype: html
+        body: "{{ email_body }}"
       when: non_compliant_servers is defined and non_compliant_servers | length > 0
