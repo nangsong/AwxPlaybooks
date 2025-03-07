@@ -61,3 +61,31 @@
       set_fact:
         non_compliant_servers: >-
           {{
+            non_compliant_servers | map('combine', {
+              'reason': item.reason + ['server was not rebooted']
+            }) | list
+          }}
+      when: >
+        (server_uptime.stdout | float) > max_uptime_days
+      loop: "{{ non_compliant_servers }}"
+
+    - name: Generate report in tabular format
+      set_fact:
+        report_table: |
+          Server Name | Reason
+          ----------- | ------
+          {% for server in non_compliant_servers %}
+          {{ server.server_name }} | {{ server.reason | join(', ') }}
+          {% endfor %}
+
+    - name: Send email report
+      mail:
+        host: "{{ smtp_server }}"
+        port: "{{ smtp_port }}"
+        username: "{{ smtp_username }}"
+        password: "{{ smtp_password }}"
+        from: "{{ email_from }}"
+        to: "{{ email_to }}"
+        subject: "{{ email_subject }}"
+        body: "{{ report_table }}"
+      when: non_compliant_servers is defined and non_compliant_servers | length > 0
