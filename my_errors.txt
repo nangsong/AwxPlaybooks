@@ -32,6 +32,10 @@
         [math]::Round($uptime.TotalDays, 2)
       register: server_uptime
 
+    - name: Calculate the cutoff date for compliance
+      set_fact:
+        cutoff_date: "{{ (ansible_date_time.iso8601 | regex_replace('T.*', '') | to_datetime('%Y-%m-%d') - (compliance_days * 86400) | strftime('%Y-%m-%d') }}"
+
     - name: Determine compliance and build non-compliant servers list
       set_fact:
         non_compliant_servers: >-
@@ -42,7 +46,7 @@
             }]
           }}
       when: >
-        ((latest_update_date.stdout | regex_replace('\r\n$', '') + ' 00:00:00') | to_datetime < (ansible_date_time.iso8601 | to_datetime - (compliance_days * 86400)) or
+        (latest_update_date.stdout | regex_replace('\r\n$', '')) < cutoff_date or
         (server_uptime.stdout | float) > max_uptime_days
 
     - name: Add reason for non-compliance (no patch received)
@@ -54,7 +58,7 @@
             }) | list
           }}
       when: >
-        ((latest_update_date.stdout | regex_replace('\r\n$', '') + ' 00:00:00') | to_datetime) < (ansible_date_time.iso8601 | to_datetime - (compliance_days * 86400))
+        (latest_update_date.stdout | regex_replace('\r\n$', '')) < cutoff_date
       loop: "{{ non_compliant_servers }}"
 
     - name: Add reason for non-compliance (server was not rebooted)
