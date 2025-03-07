@@ -1,6 +1,6 @@
 ---
 - name: Windows Server Compliance Check
-  hosts: windows_servers
+  hosts: windows
   gather_facts: no
   vars:
     compliance_days: 15
@@ -14,116 +14,52 @@
     email_subject: "Non-Compliant Windows Servers Report"
 
   tasks:
-    - name: Get last security update installation date
-      ansible.windows.win_updates:
-        category_names: SecurityUpdates
+    - name: Gather Windows updates information
+      win_updates:
+        category_names:
+          - SecurityUpdates
         state: searched
-      register: win_updates_result
+      register: windows_updates
 
-    - name: Get server uptime in days using PowerShell
-      ansible.windows.win_shell: |
-        [math]::Round(((Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime).TotalDays)
-      register: uptime_result
+    - name: Get server uptime
+      win_shell: |
+        $os = Get-WmiObject -Class Win32_OperatingSystem
+        $uptime = (Get-Date) - $os.LastBootUpTime
+        [math]::Round($uptime.TotalDays, 2)
+      register: server_uptime
 
-    - name: Set uptime_days fact
+    - name: Determine compliance
       set_fact:
-        uptime_days: "{{ uptime_result.stdout | int }}"
-
-    - name: Debug uptime_days
-      debug:
-        var: uptime_days
-
-    - name: Get the last installed security update date
-      set_fact:
-        last_patch_date: >-
-          {{
-            win_updates_result.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | sort | last | default('N/A')
-          }}
-
-    - name: Debug last_patch_date
-      debug:
-        var: last_patch_date
-
-    - name: Calculate days since last patch
-      set_fact:
-        days_since_last_patch: >-
-          {{
-            (now() | to_datetime - (last_patch_date | to_datetime)).days
-            if last_patch_date != 'N/A'
-            else compliance_days + 1
-          }}
-
-    - name: Debug days_since_last_patch
-      debug:
-        var: days_since_last_patch
-
-    - name: Determine compliance status
-      set_fact:
-        compliance_status: >-
-          {{
-            {
-              'server_name': inventory_hostname,
-              'last_patch_date': last_patch_date,
-              'uptime_days': uptime_days,
-              'is_compliant': (days_since_last_patch <= compliance_days) and (uptime_days <= max_uptime_days),
-              'reason': []
-            }
-          }}
+        non_compliant_servers: "{{ non_compliant_servers | default([]) + [{'server_name': inventory_hostname, 'reason': []}] }}"
+      when: >
+        (windows_updates.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | max | default('1970-01-01') | to_datetime) < (ansible_date_time.iso8601 | to_datetime - (compliance_days * 86400)) or
+        (server_uptime.stdout | float) > max_uptime_days
 
     - name: Add reason for non-compliance (no patch received)
       set_fact:
-        compliance_status: >-
-          {{
-            compliance_status | combine({
-              'reason': compliance_status.reason + ['no patch received']
-            }) if days_since_last_patch > compliance_days
-            else compliance_status
-          }}
+        non_compliant_servers: "{{ non_compliant_servers | map('combine', {'reason': item.reason + ['no patch received']}) | list }}"
+      when: >
+        (windows_updates.updates | selectattr('installed', 'equalto', true) | map(attribute='installed_date') | max | default('1970-01-01') | to_datetime) < (ansible_date_time.iso8601 | to_datetime - (compliance_days * 86400))
+      with_items: "{{ non_compliant_servers }}"
 
     - name: Add reason for non-compliance (server was not rebooted)
       set_fact:
-        compliance_status: >-
-          {{
-            compliance_status | combine({
-              'reason': compliance_status.reason + ['server was not rebooted']
-            }) if uptime_days > max_uptime_days
-            else compliance_status
-          }}
+        non_compliant_servers: "{{ non_compliant_servers | map('combine', {'reason': item.reason + ['server was not rebooted']}) | list }}"
+      when: >
+        (server_uptime.stdout | float) > max_uptime_days
+      with_items: "{{ non_compliant_servers }}"
 
-    - name: Collect non-compliant servers
+    - name: Generate report
       set_fact:
-        non_compliant_servers: >-
-          {{
-            (non_compliant_servers | default([])) + [compliance_status]
-            if not compliance_status.is_compliant
-            else non_compliant_servers | default([])
-          }}
+        report_table: |
+          Server Name | Reason
+          ----------- | ------
+          {% for server in non_compliant_servers %}
+          {{ server.server_name }} | {{ server.reason | join(', ') }}
+          {% endfor %}
 
-  post_tasks:
-    - name: Generate HTML table for non-compliant servers report
-      set_fact:
-        email_body: >-
-          <html>
-          <body>
-          <h2>Non-Compliant Servers Report</h2>
-          <table border="1">
-            <tr>
-              <th>Server Name</th>
-              <th>Reason</th>
-            </tr>
-            {% for server in non_compliant_servers %}
-            <tr>
-              <td>{{ server.server_name }}</td>
-              <td>{{ server.reason | join(', ') }}</td>
-            </tr>
-            {% endfor %}
-          </table>
-          </body>
-          </html>
-      when: non_compliant_servers is defined and non_compliant_servers | length > 0
-
-    - name: Send email with non-compliant servers report
-      community.general.mail:
+    - name: Send email report
+      mail:
         host: "{{ smtp_server }}"
         port: "{{ smtp_port }}"
         username: "{{ smtp_username }}"
@@ -131,6 +67,5 @@
         from: "{{ email_from }}"
         to: "{{ email_to }}"
         subject: "{{ email_subject }}"
-        subtype: html
-        body: "{{ email_body }}"
+        body: "{{ report_table }}"
       when: non_compliant_servers is defined and non_compliant_servers | length > 0
