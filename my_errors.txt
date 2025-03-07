@@ -1,36 +1,91 @@
-{
-  "start": "2025-03-07 15:12:39.291834",
-  "stdout": "2024-12-22\r\n",
-  "cmd": "$latestUpdate = Get-HotFix | Where-Object { $_.Description -match \"Security Update\" } | Sort-Object InstalledOn -Descending | Select-Object -First 1\nif ($latestUpdate) {\n    $latestUpdate.InstalledOn.ToString(\"yyyy-MM-dd\")\n} else {\n    \"1970-01-01\"\n}",
-  "stderr": "",
-  "changed": true,
-  "rc": 0,
-  "delta": "0:00:01.109429",
-  "end": "2025-03-07 15:12:40.401263",
-  "stdout_lines": [
-    "2024-12-22"
-  ],
-  "stderr_lines": [],
-  "_ansible_no_log": false
-}
+---
+- name: Windows Server Compliance Check
+  hosts: windows
+  gather_facts: no
+  vars:
+    compliance_days: 15
+    max_uptime_days: 6
+    smtp_server: "smtp.example.com"
+    smtp_port: 587
+    smtp_username: "your_email@example.com"
+    smtp_password: "your_password"
+    email_from: "your_email@example.com"
+    email_to: "recipient@example.com"
+    email_subject: "Non-Compliant Windows Servers Report"
 
-{
-  "start": "2025-03-07 15:13:29.281741",
-  "stdout": "6.69\r\n",
-  "cmd": "$os = Get-WmiObject -Class Win32_OperatingSystem\n$bootTime = [datetime]::ParseExact($os.LastBootUpTime.Split('.')[0], 'yyyyMMddHHmmss', $null)\n$uptime = (Get-Date) - $bootTime\n[math]::Round($uptime.TotalDays, 2)",
-  "stderr": "",
-  "changed": true,
-  "rc": 0,
-  "delta": "0:00:00.375041",
-  "end": "2025-03-07 15:13:29.656783",
-  "stdout_lines": [
-    "6.69"
-  ],
-  "stderr_lines": [],
-  "_ansible_no_log": false
-}
+  tasks:
+    - name: Get the latest security update installation date
+      win_shell: |
+        $latestUpdate = Get-HotFix | Where-Object { $_.Description -match "Security Update" } | Sort-Object InstalledOn -Descending | Select-Object -First 1
+        if ($latestUpdate) {
+            $latestUpdate.InstalledOn.ToString("yyyy-MM-dd")
+        } else {
+            "1970-01-01"
+        }
+      register: latest_update_date
 
-{
-  "msg": "The conditional check '(latest_update_date.stdout | regex_replace('\\r\\n$', '') | to_datetime) < (ansible_date_time.iso8601 | to_datetime - (compliance_days * 86400)) or (server_uptime.stdout | float) > max_uptime_days\n' failed. The error was: time data '2025-02-28' does not match format '%Y-%m-%d %H:%M:%S'\n\nThe error appears to be in '/runner/project/WindowsCompliance.yml': line 28, column 7, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n\n    - name: Determine compliance and build non-compliant servers list\n      ^ here\n",
-  "_ansible_no_log": false
-}
+    - name: Get server uptime in days
+      win_shell: |
+        $os = Get-WmiObject -Class Win32_OperatingSystem
+        $bootTime = [datetime]::ParseExact($os.LastBootUpTime.Split('.')[0], 'yyyyMMddHHmmss', $null)
+        $uptime = (Get-Date) - $bootTime
+        [math]::Round($uptime.TotalDays, 2)
+      register: server_uptime
+
+    - name: Determine compliance and build non-compliant servers list
+      set_fact:
+        non_compliant_servers: >-
+          {{
+            non_compliant_servers | default([]) + [{
+              'server_name': inventory_hostname,
+              'reason': []
+            }]
+          }}
+      when: >
+        ((latest_update_date.stdout | regex_replace('\r\n$', '') + ' 00:00:00') | to_datetime < (ansible_date_time.iso8601 | to_datetime - (compliance_days * 86400)) or
+        (server_uptime.stdout | float) > max_uptime_days
+
+    - name: Add reason for non-compliance (no patch received)
+      set_fact:
+        non_compliant_servers: >-
+          {{
+            non_compliant_servers | map('combine', {
+              'reason': item.reason + ['no patch received']
+            }) | list
+          }}
+      when: >
+        ((latest_update_date.stdout | regex_replace('\r\n$', '') + ' 00:00:00') | to_datetime) < (ansible_date_time.iso8601 | to_datetime - (compliance_days * 86400))
+      loop: "{{ non_compliant_servers }}"
+
+    - name: Add reason for non-compliance (server was not rebooted)
+      set_fact:
+        non_compliant_servers: >-
+          {{
+            non_compliant_servers | map('combine', {
+              'reason': item.reason + ['server was not rebooted']
+            }) | list
+          }}
+      when: >
+        (server_uptime.stdout | float) > max_uptime_days
+      loop: "{{ non_compliant_servers }}"
+
+    - name: Generate report in tabular format
+      set_fact:
+        report_table: |
+          Server Name | Reason
+          ----------- | ------
+          {% for server in non_compliant_servers %}
+          {{ server.server_name }} | {{ server.reason | join(', ') }}
+          {% endfor %}
+
+    - name: Send email report
+      mail:
+        host: "{{ smtp_server }}"
+        port: "{{ smtp_port }}"
+        username: "{{ smtp_username }}"
+        password: "{{ smtp_password }}"
+        from: "{{ email_from }}"
+        to: "{{ email_to }}"
+        subject: "{{ email_subject }}"
+        body: "{{ report_table }}"
+      when: non_compliant_servers is defined and non_compliant_servers | length > 0
