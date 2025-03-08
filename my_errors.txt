@@ -1,125 +1,25 @@
----
-- name: Windows Server Compliance Check
-  hosts: windows
-  gather_facts: no
-  vars:
-    kb_list: "{{ kb_list | default('') }}"  # Comma-separated list of KBs to check
-    max_uptime_days: 5
-    smtp_server: "smtp.example.com"
-    smtp_port: 587
-    smtp_username: "your_email@example.com"
-    smtp_password: "your_password"
-    email_from: "your_email@example.com"
-    email_to: "recipient@example.com"
-    email_subject: "Non-Compliant Windows Servers Report"
-
-  tasks:
-    - name: Split the KB list into an array
-      set_fact:
-        kb_array: "{{ kb_list.split(',') }}"
-
-    - name: Check if specified KBs are installed
-      win_shell: |
-        $missingKBs = @()
-        $installedKBs = Get-HotFix | Select-Object -ExpandProperty HotFixID
-        $requiredKBs = @({{ kb_array | to_json }})
-        foreach ($kb in $requiredKBs) {
-            if ($kb -notin $installedKBs) {
-                $missingKBs += $kb
-            }
-        }
-        $missingKBs -join ','
-      register: missing_kbs
-
-    - name: Get server uptime in days
-      win_shell: |
-        $os = Get-WmiObject -Class Win32_OperatingSystem
-        $bootTime = [datetime]::ParseExact($os.LastBootUpTime.Split('.')[0], 'yyyyMMddHHmmss', $null)
-        $uptime = (Get-Date) - $bootTime
-        [math]::Round($uptime.TotalDays, 2)
-      register: server_uptime
-
-    - name: Determine compliance and build non-compliant servers list
-      set_fact:
-        non_compliant_servers: >-
-          {{
-            non_compliant_servers | default([]) + [{
-              'server_name': inventory_hostname,
-              'reason': []
-            }]
-          }}
-      when: >
-        missing_kbs.stdout != '' or
-        (server_uptime.stdout | float) >= max_uptime_days
-
-    - name: Add reason for non-compliance (missing KBs)
-      set_fact:
-        non_compliant_servers: >-
-          {{
-            non_compliant_servers | map('combine', {
-              'reason': item.reason + ['missing KBs: ' + missing_kbs.stdout]
-            }) | list
-          }}
-      when: missing_kbs.stdout != ''
-      loop: "{{ non_compliant_servers }}"
-
-    - name: Add reason for non-compliance (uptime too high)
-      set_fact:
-        non_compliant_servers: >-
-          {{
-            non_compliant_servers | map('combine', {
-              'reason': item.reason + ['uptime: ' + (server_uptime.stdout | float | string) + ' days']
-            }) | list
-          }}
-      when: (server_uptime.stdout | float) >= max_uptime_days
-      loop: "{{ non_compliant_servers }}"
-
-    - name: Generate HTML report
-      set_fact:
-        email_body: |
-          <html>
-          <head>
-            <style>
-              table {
-                width: 50%;
-                border-collapse: collapse;
-              }
-              th, td {
-                border: 1px solid black;
-                padding: 8px;
-                text-align: left;
-              }
-              th {
-                background-color: #f2f2f2;
-              }
-            </style>
-          </head>
-          <body>
-            <h2>Non-Compliant Windows Servers Report</h2>
-            <table>
-              <tr>
-                <th>Server Name</th>
-                <th>Reason</th>
-              </tr>
-              {% for server in non_compliant_servers %}
-              <tr>
-                <td>{{ server.server_name }}</td>
-                <td>{{ server.reason | join(', ') }}</td>
-              </tr>
-              {% endfor %}
-            </table>
-          </body>
-          </html>
-
-    - name: Send email report
-      mail:
-        host: "{{ smtp_server }}"
-        port: "{{ smtp_port }}"
-        username: "{{ smtp_username }}"
-        password: "{{ smtp_password }}"
-        from: "{{ email_from }}"
-        to: "{{ email_to }}"
-        subject: "{{ email_subject }}"
-        body: "{{ email_body }}"
-        subtype: html
-      when: non_compliant_servers is defined and non_compliant_servers | length > 0
+{
+  "start": "2025-03-08 17:15:29.615695",
+  "stdout": "",
+  "cmd": "$missingKBs = @()\n$installedKBs = Get-HotFix | Select-Object -ExpandProperty HotFixID\n$requiredKBs = @([\"kb5043124\", \"kb5048671\", \"kb5976200\"])\nforeach ($kb in $requiredKBs) {\n    if ($kb -notin $installedKBs) {\n        $missingKBs += $kb\n    }\n}\n$missingKBs -join ','",
+  "msg": "non-zero return code",
+  "stderr": "At line:3 char:19\r\n+ $requiredKBs = @([\"kb5043124\", \"kb5048671\", \"kb5976200\"])\r\n+                   ~\r\nMissing type name after '['.\r\nAt line:3 char:30\r\n+ $requiredKBs = @([\"kb5043124\", \"kb5048671\", \"kb5976200\"])\r\n+                              ~\r\nMissing argument in parameter list.\r\n    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException\r\n    + FullyQualifiedErrorId : MissingTypename",
+  "changed": true,
+  "rc": 1,
+  "delta": "0:00:00.281267",
+  "end": "2025-03-08 17:15:29.896963",
+  "stdout_lines": [],
+  "stderr_lines": [
+    "At line:3 char:19",
+    "+ $requiredKBs = @([\"kb5043124\", \"kb5048671\", \"kb5976200\"])",
+    "+                   ~",
+    "Missing type name after '['.",
+    "At line:3 char:30",
+    "+ $requiredKBs = @([\"kb5043124\", \"kb5048671\", \"kb5976200\"])",
+    "+                              ~",
+    "Missing argument in parameter list.",
+    "    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException",
+    "    + FullyQualifiedErrorId : MissingTypename"
+  ],
+  "_ansible_no_log": false
+}
