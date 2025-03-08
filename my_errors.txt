@@ -3,8 +3,8 @@
   hosts: windows
   gather_facts: no
   vars:
-    compliance_days: 15
-    max_uptime_days: 6
+    kb_list: "{{ kb_list | default('') }}"  # Comma-separated list of KBs to check
+    max_uptime_days: 5
     smtp_server: "smtp.example.com"
     smtp_port: 587
     smtp_username: "your_email@example.com"
@@ -14,15 +14,22 @@
     email_subject: "Non-Compliant Windows Servers Report"
 
   tasks:
-    - name: Get the latest security update installation date
+    - name: Split the KB list into an array
+      set_fact:
+        kb_array: "{{ kb_list.split(',') }}"
+
+    - name: Check if specified KBs are installed
       win_shell: |
-        $latestUpdate = Get-HotFix | Where-Object { $_.Description -match "Security Update" } | Sort-Object InstalledOn -Descending | Select-Object -First 1
-        if ($latestUpdate) {
-            $latestUpdate.InstalledOn.ToString("yyyy-MM-dd")
-        } else {
-            "1970-01-01"
+        $missingKBs = @()
+        $installedKBs = Get-HotFix | Select-Object -ExpandProperty HotFixID
+        $requiredKBs = @({{ kb_array | to_json }})
+        foreach ($kb in $requiredKBs) {
+            if ($kb -notin $installedKBs) {
+                $missingKBs += $kb
+            }
         }
-      register: latest_update_date
+        $missingKBs -join ','
+      register: missing_kbs
 
     - name: Get server uptime in days
       win_shell: |
@@ -31,12 +38,6 @@
         $uptime = (Get-Date) - $bootTime
         [math]::Round($uptime.TotalDays, 2)
       register: server_uptime
-
-    - name: Calculate the cutoff date for compliance using server local time
-      win_shell: |
-        $cutoffDate = (Get-Date).AddDays(-{{ compliance_days }}).ToString("yyyy-MM-dd")
-        $cutoffDate
-      register: cutoff_date
 
     - name: Determine compliance and build non-compliant servers list
       set_fact:
@@ -48,31 +49,29 @@
             }]
           }}
       when: >
-        (latest_update_date.stdout | regex_replace('\r\n$', '')) < cutoff_date.stdout or
-        (server_uptime.stdout | float) > max_uptime_days
+        missing_kbs.stdout != '' or
+        (server_uptime.stdout | float) >= max_uptime_days
 
-    - name: Add reason for non-compliance (no patch received)
+    - name: Add reason for non-compliance (missing KBs)
       set_fact:
         non_compliant_servers: >-
           {{
             non_compliant_servers | map('combine', {
-              'reason': item.reason + ['no patch received']
+              'reason': item.reason + ['missing KBs: ' + missing_kbs.stdout]
             }) | list
           }}
-      when: >
-        (latest_update_date.stdout | regex_replace('\r\n$', '')) < cutoff_date.stdout
+      when: missing_kbs.stdout != ''
       loop: "{{ non_compliant_servers }}"
 
-    - name: Add reason for non-compliance (server was not rebooted)
+    - name: Add reason for non-compliance (uptime too high)
       set_fact:
         non_compliant_servers: >-
           {{
             non_compliant_servers | map('combine', {
-              'reason': item.reason + ['server was not rebooted']
+              'reason': item.reason + ['uptime: ' + (server_uptime.stdout | float | string) + ' days']
             }) | list
           }}
-      when: >
-        (server_uptime.stdout | float) > max_uptime_days
+      when: (server_uptime.stdout | float) >= max_uptime_days
       loop: "{{ non_compliant_servers }}"
 
     - name: Generate HTML report
