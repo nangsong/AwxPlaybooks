@@ -1,18 +1,15 @@
-$solwservices=get-service -Name "SolarWinds*" | select -property name,status,starttype
-$svcstatus=0
- 
-foreach ($solwservice in $solwservices){
- 
-$SOLWsvcName=$solwservice.name
-$SOLWsvctatus=$solwservice.status
-$SOLWsvcStartType=$solwservice.starttype
- 
-if($SOLWsvcStartType -eq "Disabled"){$svcstatus++}
- 
- 
+{
+  "start": "2025-03-21 13:54:13.589394",
+  "stdout": "\r\n",
+  "cmd": "$missingKBs = @()\n$installedKBs = Get-HotFix | Select-Object -ExpandProperty HotFixID\n$requiredKBs = \"KB5050008,\".Split(',')\nforeach ($kb in $requiredKBs) {\n    if ($installedKBs -notcontains $kb) {\n        $missingKBs += $kb\n    }\n}\n$missingKBs -join ','",
+  "stderr": "",
+  "changed": true,
+  "rc": 0,
+  "delta": "0:00:01.203127",
+  "end": "2025-03-21 13:54:14.792521",
+  "stdout_lines": [
+    ""
+  ],
+  "stderr_lines": [],
+  "_ansible_no_log": null
 }
- 
-if($svcstatus -eq 0){
-    Write-Host "Active"
-} Else {
-    Write-Host "Standby"
