@@ -1,12 +1,5 @@
-{
-  "ansible_facts": {
-    "kb_list": "  ['KB5049993']\n"
-  },
-  "_ansible_no_log": null,
-  "changed": false
-}
-
-{
-  "msg": "Invalid data passed to 'loop', it requires a list, got this instead:   ['KB5049993']\n. Hint: If you passed a list/dict of just one element, try adding wantlist=True to your lookup invocation or use q/query instead of lookup.",
-  "_ansible_no_log": null
-}
+ - name: Copy KB to be installed using win_shell
+      ansible.windows.win_shell: |
+        Copy-Item -Path "{{ kb_paths }}\{{ item }}.msu" -Destination "C:\KB_2_Install\{{ item }}.msu"
+      loop: "{{ kb_list.split(',') if kb_list else [] }}"
+      when: kb_list | length > 0
