@@ -1,48 +1,12 @@
-- name: Install Downloaded KBs
-  hosts: all
-  gather_facts: no
-  vars:
-    kb_list_2016: "{{ kb_list_2016 | default('') }}"  # Comma-separated list of KBs for Windows Server 2016
-    kb_list_2019: "{{ kb_list_2019 | default('') }}"  # Comma-separated list of KBs for Windows Server 2019
-    kb_paths : '\\FCP4WSCCMMS01\KBs_2025' # Path to where to KBs should be located    
-  
-  tasks:
-    - name: Get the OS version
-      win_shell: |
-        (Get-WmiObject -Class Win32_OperatingSystem).Version
-      register: os_version
+{
+  "ansible_facts": {
+    "kb_list": "  ['KB5049993']\n"
+  },
+  "_ansible_no_log": null,
+  "changed": false
+}
 
-    - name: Set the appropriate KB list based on OS version
-      set_fact:
-        kb_list: >-
-          {{
-            ('10.0.14393' in os_version.stdout) | ternary(kb_list_2016,
-            ('10.0.17763' in os_version.stdout) | ternary(kb_list_2019, ''))
-          }}
-
-    - name: Create directory for the KBs
-      ansible.windows.win_file:
-        path: C:\KB_2_Install
-        state: directory
-
-    - name: Copy KB to be install
-      ansible.windows.win_copy:
-        src: "{{ kb_paths }}\\{{ item }}.msu"
-        dest: C:\KB_2_Install 
-      loop: kb_list
-      when: kb_list | length > 0
-
-    - block:
-        - name: Install MSU patch
-          ansible.windows.win_shell: |
-            wusa.exe "C:\KB_2_Install\{{ item }}.msu" /quiet /norestart
-          loop: kb_list.split(',')
-          register: install_results
-      rescue:
-        - debug:
-            msg: "Failed to install on {{ inventory_hostname }}"
-
-    - name: Remove directory structure
-      ansible.windows.win_file:
-        path: C:\KB_2_Install
-        state: absent
+{
+  "msg": "Invalid data passed to 'loop', it requires a list, got this instead:   ['KB5049993']\n. Hint: If you passed a list/dict of just one element, try adding wantlist=True to your lookup invocation or use q/query instead of lookup.",
+  "_ansible_no_log": null
+}
