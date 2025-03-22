@@ -19,16 +19,24 @@
       loop: "{{ kb_list.split(',') if kb_list else [] }}"
       when: item | length > 0
 
-    - name: Install extracted .cab files using DISM
+    - name: Install extracted .cab files using DISM (asynchronously)
       ansible.windows.win_shell: |
         dism /online /add-package /packagepath:"{{ extract_folder }}\{{ item }}" /quiet /norestart
       loop: "{{ lookup('fileglob', extract_folder + '\\*.cab') }}"
+      async: 1800  # Maximum time (in seconds) the task can run (30 minutes)
+      poll: 0      # Don't wait for the task to complete
       register: dism_results
       ignore_errors: yes
 
-    - name: Check DISM installation results
-      debug:
-        msg: "Installation results: {{ dism_results.results | map(attribute='stdout') | list }}"
+    - name: Check DISM installation results (optional)
+      async_status:
+        jid: "{{ item.ansible_job_id }}"
+      loop: "{{ dism_results.results }}"
+      when: item.ansible_job_id is defined
+      register: job_status
+      until: job_status.finished
+      retries: 30
+      delay: 10
 
     - name: Clean up extracted files (optional)
       ansible.windows.win_file:
