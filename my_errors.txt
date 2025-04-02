@@ -1,43 +1,42 @@
----
-- name: Install Windows hotfixes asynchronously with delay
-  hosts: windows_servers
+### Ansible Playbook to Generate and Send Consolidated SQL Cluster Health Report ###
+- name: Generate and send SQL Cluster Health Report
+  hosts: all
   gather_facts: no
-
   vars:
-    hotfix_dir: "C:\\kbs_2_install"
-    install_delay: 30  # seconds between installations
-
+    cluster_nodes: server1.domain.com,server2.domain.com,server3.domain.com
   tasks:
-    - name: Find all .msu files in hotfix directory
-      ansible.windows.win_find:
-        paths: "{{ hotfix_dir }}"
-        patterns: "*.msu"
-      register: found_msu_files
+    - name: Execute PowerShell script to gather cluster health data from specified nodes
+      win_shell: |
+        $report = "<html><body><h2>SQL Cluster Health Report</h2><table border='1'>"
+        $report += "<tr><th>Cluster Name</th><th>Node</th><th>Status</th><th>Owner Group</th><th>Last Failover</th></tr>"
+        foreach ($node in $env:ANSIBLE_NODES.Split(',')) {
+          try {
+            $cluster = (Get-Cluster -Cluster $node).Name
+            $resources = Get-ClusterResource -Cluster $cluster
+            foreach ($resource in $resources) {
+              $status = $resource.State
+              $ownerGroup = $resource.OwnerGroup
+              $lastFailover = $resource.LastFailoverTime
+              $report += "<tr><td>$($cluster)</td><td>$($node)</td><td>$($status)</td><td>$($ownerGroup)</td><td>$($lastFailover)</td></tr>"
+            }
+          } catch {
+            $report += "<tr><td>$($node)</td><td colspan='4'>Failed to retrieve cluster info</td></tr>"
+          }
+        }
+        $report += "</table></body></html>"
+        return $report
+      args:
+        executable: powershell.exe
+      environment:
+        ANSIBLE_NODES: "{{ cluster_nodes }}"
+      register: cluster_health_report
 
-    - name: Display found hotfixes
-      debug:
-        msg: "Found hotfixes to install: {{ found_msu_files.files | map(attribute='path') | list }}"
-
-    - name: Asynchronously install each hotfix with delay
-      ansible.windows.win_hotfix:
-        hotfix_identifier: "{{ item.path | basename }}"
-        source: "{{ item.path }}"
-      async: 3600  # 1 hour max runtime (adjust as needed)
-      poll: 0      # fire-and-forget mode
-      loop: "{{ found_msu_files.files }}"
-      loop_control:
-        pause: "{{ install_delay }}"  # delay between starting installations
-      register: async_installations
-      ignore_errors: yes  # Continue if one fails
-
-    - name: Optional - Check installation status later
-      ansible.windows.win_hotfix:
-        hotfix_identifier: "{{ item.item.path | basename }}"
-      loop: "{{ async_installations.results }}"
-      when: item.ansible_job_id is defined
-      register: installation_checks
-      failed_when: false  # Don't fail the playbook if check fails
-
-    - name: Optional - Display installation results
-      debug:
-        var: installation_checks
+    - name: Send consolidated health report via email
+      ansible.builtin.mail:
+        host: smtp.example.com
+        port: 25
+        from: cluster-report@example.com
+        to: admin@example.com
+        subject: 'SQL Cluster Health Report - Consolidated'
+        body: "{{ cluster_health_report.stdout }}"
+        subtype: html
