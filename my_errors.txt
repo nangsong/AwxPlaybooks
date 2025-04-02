@@ -2,34 +2,32 @@
 - name: Generate and send SQL Cluster Health Report
   hosts: all
   gather_facts: no
-  vars:
-    cluster_nodes: server1.domain.com,server2.domain.com,server3.domain.com
   tasks:
-    - name: Execute PowerShell script to gather cluster health data from specified nodes
+    - name: Execute PowerShell script to gather cluster health data from each host
       win_shell: |
         $report = "<html><body><h2>SQL Cluster Health Report</h2><table border='1'>"
         $report += "<tr><th>Cluster Name</th><th>Node</th><th>Status</th><th>Owner Group</th><th>Last Failover</th></tr>"
-        foreach ($node in $env:ANSIBLE_NODES.Split(',')) {
-          try {
-            $cluster = (Get-Cluster -Cluster $node).Name
-            $resources = Get-ClusterResource -Cluster $cluster
-            foreach ($resource in $resources) {
-              $status = $resource.State
-              $ownerGroup = $resource.OwnerGroup
-              $lastFailover = $resource.LastFailoverTime
-              $report += "<tr><td>$($cluster)</td><td>$($node)</td><td>$($status)</td><td>$($ownerGroup)</td><td>$($lastFailover)</td></tr>"
-            }
-          } catch {
-            $report += "<tr><td>$($node)</td><td colspan='4'>Failed to retrieve cluster info</td></tr>"
+        try {
+          $cluster = (Get-Cluster -Cluster $env:COMPUTERNAME).Name
+          $resources = Get-ClusterResource -Cluster $cluster
+          foreach ($resource in $resources) {
+            $status = $resource.State
+            $ownerGroup = $resource.OwnerGroup
+            $lastFailover = $resource.LastFailoverTime
+            $report += "<tr><td>$($cluster)</td><td>$($env:COMPUTERNAME)</td><td>$($status)</td><td>$($ownerGroup)</td><td>$($lastFailover)</td></tr>"
           }
+        } catch {
+          $report += "<tr><td>$($env:COMPUTERNAME)</td><td colspan='4'>Failed to retrieve cluster info</td></tr>"
         }
         $report += "</table></body></html>"
         return $report
       args:
         executable: powershell.exe
-      environment:
-        ANSIBLE_NODES: "{{ cluster_nodes }}"
       register: cluster_health_report
+
+    - name: Aggregate cluster health reports
+      ansible.builtin.set_fact:
+        consolidated_report: "{{ consolidated_report | default('') }}{{ cluster_health_report.stdout }}"
 
     - name: Send consolidated health report via email
       ansible.builtin.mail:
@@ -38,5 +36,5 @@
         from: cluster-report@example.com
         to: admin@example.com
         subject: 'SQL Cluster Health Report - Consolidated'
-        body: "{{ cluster_health_report.stdout }}"
+        body: "{{ consolidated_report }}"
         subtype: html
