@@ -1,80 +1,172 @@
-- name: Get SQL Cluster Health Status
-  hosts: all
-  gather_facts: no
-  tasks:
-    - name: Check cluster status and resources
+    - name: Check Cluster Nodes and Service Status
       win_shell: |
-        # Initialize result object
-        $result = @{
-            IsClusterNode = $false
-            ClusterName = "N/A"
-            CurrentNode = $env:COMPUTERNAME
-            Resources = @()
-            Error = $null
-        }
+        $ClusterQuorum = get-clusterQuorum | Select-Object Cluster
+        $ClusterGroup = get-clusterGroup | Select-Object Name, OwnerNode, State
+        $ClusterNodes = Get-ClusterNode | Select-Object NodeName, State, DynamicWeight, NodeWeight
+        $ClusterStatus = get-service -Name clussvc | Select-Object DisplayName, Name, Status
+        $Resources = Get-ClusterResource | Select-Object Name, @{Name="State";Expression={$_.State -replace 'Online', 'on-line' -replace 'Offline', 'off-line'}}, ResourceType
 
-        try {
-            # First check if this is a cluster node at all
-            $clusterNode = Get-ClusterNode -Name $env:COMPUTERNAME -ErrorAction Stop
-            
-            # If we get here, it's a cluster node
-            $result.IsClusterNode = $true
-            $result.ClusterName = $clusterNode.Cluster.Name
-            
-            # Get all cluster resources with important properties
-            $resources = Get-ClusterResource -Cluster $result.ClusterName -ErrorAction Stop | 
-                        Where-Object { $_.OwnerGroup -like "SQL*" -or $_.ResourceType -like "SQL*" }
-            
-            foreach ($resource in $resources) {
-                $result.Resources += @{
-                    Name = $resource.Name
-                    State = $resource.State.ToString()
-                    Group = $resource.OwnerGroup
-                    OwnerNode = (Get-ClusterOwner -InputObject $resource).Owners -join ", "
-                    LastFailover = if ($resource.LastFailoverTime) { $resource.LastFailoverTime.ToString() } else { "Never" }
-                    ResourceType = $resource.ResourceType
-                }
-            }
-        }
-        catch [Microsoft.FailoverClusters.PowerShell.ClusterCmdletException] {
-            # This is normal for non-cluster nodes
-            $result.Error = "Not part of a cluster"
-        }
-        catch {
-            # Other unexpected errors
-            $result.Error = $_.Exception.Message
-        }
+        $report = @"
+        Cluster Name: $($ClusterQuorum.Cluster)
+        Service: $($ClusterStatus.Status)
 
-        # Return the result
-        $result | ConvertTo-Json -Depth 5
-      args:
-        executable: powershell.exe
-      register: cluster_data
+        Cluster Group: 
+        $($ClusterGroup | Format-Table -AutoSize | Out-String)
 
-    - name: Display cluster status
-      debug:
-        var: cluster_data.stdout
+        Nodes:
+        $($ClusterNodes | Format-Table -AutoSize | Out-String)
 
-    - name: Create HTML report
-      block:
-        - name: Prepare report data
-          set_fact:
-            report_data: "{{ (groups['all'] | map('extract', hostvars, ['cluster_data', 'stdout']) | list) | from_json }}"
+        Resources:
+        $($Resources | Format-Table -AutoSize | Out-String)
+        "@
 
-        - name: Generate HTML
-          template:
-            src: cluster_report.html.j2
-            dest: /tmp/cluster_report.html
-          delegate_to: localhost
+        return $report
+      register: cluster_info
 
-        - name: Send email report
-          mail:
-            host: smtp.example.com
-            port: 25
-            to: dba-team@example.com
-            subject: "SQL Cluster Health Report - {{ now() | date_format('%Y-%m-%d') }}"
-            body: "{{ lookup('file', '/tmp/cluster_report.html') }}"
-            subtype: html
-          delegate_to: localhost
-      when: "'all' in groups"
-      run_once: true
+    - name: Aggregate Cluster Data
+      set_fact:
+        cluster_report: |
+          {% for item in ansible_play_hosts %}
+            {{ hostvars[item].cluster_info.stdout }}
+          {% endfor %}
+      delegate_to: localhost
+      run_once: True
+
+    - name: Send Consolidated Cluster Health Report via Email in HTML
+      mail:
+        host: "{{ relay_1 }}"
+        port: "{{ port_cc }}"
+        from: "{{ source_email }}"
+        to: "{{ destination_email_success }}"
+        subject: "{{ subject_email_success }}"
+
+        body: |
+          <html>
+          <head>
+            <style>
+                table { width: 80%; border-collapse: collapse; }
+                th, td { border: 1px solid black; padding: 8px; text-align: left; }
+                th { background-color:#288efc; }
+            </style>
+          </head>
+          <body>
+            <h2>Windows Clusters Health Check Report</h2>
+            {% for cluster in cluster_report.split('Cluster Name: ') if cluster %}
+            <div class="cluster-section">
+              <div class="cluster-title">
+                Cluster Name: {{ cluster.splitlines()[0] }}   
+                Service: {% for line in cluster.splitlines() if 'Running' in line or 'Stopped' in line %}{{ line.split()[0] }}{% endfor %}             
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Node Name</th>
+                    <th>Node State</th>
+                    <th>Dynamic Weight</th>
+                    <th>Node Weight</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for line in cluster.splitlines() if 'Up' in line or 'Down' in line %}
+                  <tr>
+                    <td>{{ line.split()[0] }}</td>
+                    <td class="{{ 'status-up' if 'Up' in line else 'status-down' }}">{{ line.split()[1] }}</td>
+                    <td>{{ line.split()[2] }}</td>
+                    <td>{{ line.split()[3] }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Owner Node</th>
+                    <th>State</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for line in cluster.splitlines() if 'Online' in line or 'Offline' in line %}
+                  <tr>
+                    <td>
+                      {% if line.split()|length > 3 %}
+                        {{ line.split()[0] }} {{ line.split()[1] }}
+                      {% else %}
+                        {{ line.split()[0] }}
+                      {% endif %}
+                    </td>
+                    <td>{{ line.split()[2] if line.split()|length > 3 else line.split()[1] }}</td>
+                    <td>{{ line.split()[3] if line.split()|length > 3 else line.split()[2] }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+
+              <table>
+                <thead>
+                  <tr>
+                    <th>Resource Name</th>
+                    <th>Resource State</th>
+                    <th>Resource Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for line in cluster.splitlines() if 'on-line' in line or 'off-line' in line %}
+                  <tr>
+                    <td>
+                      {% if 'Cluster IP Address' in line %}
+                        {{ line.split()[0] }} {{ line.split()[1] }} {{ line.split()[2] }}
+                      {% elif 'Cluster Name' in line %}
+                        {{ line.split()[0] }} {{ line.split()[1] }}
+                      {% elif 'File Share Witness' in line %}
+                        {{ line.split()[0] }} {{ line.split()[1] }} {{ line.split()[2] }}
+                      {% elif 'SQL Server Availability Group' in line %}
+                        {{ line.split()[0] }}
+                      {% else %}
+                        {{ line.split()[0] }}
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if 'Cluster IP Address' in line %}
+                        {{ line.split()[3] }}
+                      {% elif 'Cluster Name' in line %}
+                        {{ line.split()[2] }} 
+                      {% elif 'File Share Witness' in line %}
+                        {{ line.split()[3] }}
+                      {% elif 'SQL Server Availability Group' in line %}
+                        {{ line.split()[1] }}
+                      {% elif 'Network Name' in line %}
+                        {{ line.split()[1] }}
+                      {% else %}
+                        {{ line.split()[3] }}
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if 'Cluster IP Address' in line %}
+                        {{ line.split()[4] }} {{ line.split()[5] }}
+                      {% elif 'Cluster Name' in line %}
+                        {{ line.split()[3] }} {{ line.split()[4] }} 
+                      {% elif 'File Share Witness' in line %}
+                        {{ line.split()[4] }} {{ line.split()[5] }} {{ line.split()[6] }}
+                      {% elif 'SQL Server Availability Group' in line %}
+                        {{ line.split()[2] }} {{ line.split()[3] }} {{ line.split()[4] }} {{ line.split()[5] }}
+                      {% elif 'Network Name' in line %}
+                        {{ line.split()[2] }}
+                      {% else %}
+                        {{ line.split()[2:] }}
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+   
+            </div>
+            {% endfor %}
+            <p style="font-size: 12px; color: #999;">This report was generated automatically by Windows Team Using Ansible.</p>
+          </body>
+          </html>
+        subtype: html
+      delegate_to: localhost
+      run_once: True
