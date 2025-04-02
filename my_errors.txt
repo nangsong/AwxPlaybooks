@@ -1,34 +1,16 @@
-- name: Execute PowerShell script to gather cluster health data
-  win_shell: |
-    $ErrorActionPreference = "Stop"
-    try {
-      $clusterObj = Get-Cluster -Cluster $env:COMPUTERNAME -ErrorAction Stop
-      $clusterName = $clusterObj.Name
-      $resources = Get-ClusterResource -Cluster $clusterName -ErrorAction Stop | 
-                   Select-Object Name, State, OwnerGroup, LastFailoverTime
-      
-      $output = @()
-      foreach ($resource in $resources) {
-        $output += @{
-          ClusterName  = "$clusterName"
-          Node         = "$env:COMPUTERNAME"
-          ResourceName = "$($resource.Name)"
-          Status       = "$($resource.State)"
-          OwnerGroup   = "$($resource.OwnerGroup)"
-          LastFailover = "$($resource.LastFailoverTime)"
-        }
-      }
-      $output | ConvertTo-Json -Compress
-    } catch {
-      @{
-        ClusterName  = "Unknown"
-        Node         = "$env:COMPUTERNAME"
-        ResourceName = "Error"
-        Status       = "Failed"
-        OwnerGroup   = "N/A"
-        LastFailover = "N/A"
-      } | ConvertTo-Json -Compress
-    }
-  args:
-    executable: powershell.exe
-  register: cluster_health_data
+Stop : The term 'Stop' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:26
++ $ErrorActionPreference = Stop
++                          ~~~~
+    + CategoryInfo          : ObjectNotFound: (Stop:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+Unknown : The term 'Unknown' is not recognized as the name of a cmdlet, function, script file, or operable program. 
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:22 char:16
++  ClusterName = Unknown
++                ~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (Unknown:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
