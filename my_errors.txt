@@ -1,43 +1,46 @@
-- name: Execute PowerShell script to gather cluster health data
+- name: Get cluster health from node
   win_shell: |
-    # Force all output to be treated as strings
-    $output = @()
-    
+    # Initialize result structure
+    $result = @{
+        ClusterName = ""
+        CurrentNode = $env:COMPUTERNAME
+        IsClusterNode = $false
+        Resources = @()
+        Error = $null
+    }
+
     try {
-        $cluster = Get-Cluster -Cluster $env:COMPUTERNAME -ErrorAction SilentlyContinue
-        if ($cluster) {
-            $resources = Get-ClusterResource -Cluster $cluster.Name -ErrorAction SilentlyContinue
-            foreach ($resource in $resources) {
-                $output += @{
-                    'ClusterName' = [string]$cluster.Name
-                    'Node' = [string]$env:COMPUTERNAME
-                    'ResourceName' = [string]$resource.Name
-                    'Status' = [string]$resource.State
-                    'OwnerGroup' = [string]$resource.OwnerGroup
-                    'LastFailover' = [string]$resource.LastFailoverTime
+        # METHOD 1: Check if current node is part of any cluster
+        $clusterNode = Get-ClusterNode -Name $env:COMPUTERNAME -ErrorAction SilentlyContinue
+        
+        if ($clusterNode) {
+            $result.IsClusterNode = $true
+            $cluster = Get-Cluster -Name $clusterNode.Cluster.Name
+            $result.ClusterName = $cluster.Name
+            
+            # Get all resources with detailed status
+            $result.Resources = Get-ClusterResource -Cluster $cluster.Name | ForEach-Object {
+                @{
+                    Name = $_.Name
+                    State = $_.State.ToString()
+                    OwnerNode = (Get-ClusterOwner -InputObject $_).Owners -join ", "
+                    Group = $_.OwnerGroup
+                    LastFailover = if ($_.LastFailoverTime) { $_.LastFailoverTime.ToString() } else { "Never" }
                 }
             }
         } else {
-            throw "Cluster not found"
+            $result.Error = "This node does not belong to any cluster"
         }
     }
     catch {
-        $output = @{
-            'ClusterName' = 'Unknown'
-            'Node' = [string]$env:COMPUTERNAME
-            'ResourceName' = 'Error'
-            'Status' = 'Failed'
-            'OwnerGroup' = 'N/A'
-            'LastFailover' = 'N/A'
-        }
+        $result.Error = $_.Exception.Message
     }
-    
-    # Convert to JSON ensuring single object or array is handled
-    if ($output.Count -eq 1) {
-        $output[0] | ConvertTo-Json -Compress
-    } else {
-        $output | ConvertTo-Json -Compress
-    }
+
+    $result | ConvertTo-Json -Depth 5
   args:
     executable: powershell.exe
   register: cluster_health_data
+
+- name: Show cluster status
+  debug:
+    var: cluster_health_data.stdout
