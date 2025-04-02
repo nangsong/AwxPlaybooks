@@ -1,46 +1,80 @@
-- name: Get cluster health from node
-  win_shell: |
-    # Initialize result structure
-    $result = @{
-        ClusterName = ""
-        CurrentNode = $env:COMPUTERNAME
-        IsClusterNode = $false
-        Resources = @()
-        Error = $null
-    }
+- name: Get SQL Cluster Health Status
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Check cluster status and resources
+      win_shell: |
+        # Initialize result object
+        $result = @{
+            IsClusterNode = $false
+            ClusterName = "N/A"
+            CurrentNode = $env:COMPUTERNAME
+            Resources = @()
+            Error = $null
+        }
 
-    try {
-        # METHOD 1: Check if current node is part of any cluster
-        $clusterNode = Get-ClusterNode -Name $env:COMPUTERNAME -ErrorAction SilentlyContinue
-        
-        if ($clusterNode) {
-            $result.IsClusterNode = $true
-            $cluster = Get-Cluster -Name $clusterNode.Cluster.Name
-            $result.ClusterName = $cluster.Name
+        try {
+            # First check if this is a cluster node at all
+            $clusterNode = Get-ClusterNode -Name $env:COMPUTERNAME -ErrorAction Stop
             
-            # Get all resources with detailed status
-            $result.Resources = Get-ClusterResource -Cluster $cluster.Name | ForEach-Object {
-                @{
-                    Name = $_.Name
-                    State = $_.State.ToString()
-                    OwnerNode = (Get-ClusterOwner -InputObject $_).Owners -join ", "
-                    Group = $_.OwnerGroup
-                    LastFailover = if ($_.LastFailoverTime) { $_.LastFailoverTime.ToString() } else { "Never" }
+            # If we get here, it's a cluster node
+            $result.IsClusterNode = $true
+            $result.ClusterName = $clusterNode.Cluster.Name
+            
+            # Get all cluster resources with important properties
+            $resources = Get-ClusterResource -Cluster $result.ClusterName -ErrorAction Stop | 
+                        Where-Object { $_.OwnerGroup -like "SQL*" -or $_.ResourceType -like "SQL*" }
+            
+            foreach ($resource in $resources) {
+                $result.Resources += @{
+                    Name = $resource.Name
+                    State = $resource.State.ToString()
+                    Group = $resource.OwnerGroup
+                    OwnerNode = (Get-ClusterOwner -InputObject $resource).Owners -join ", "
+                    LastFailover = if ($resource.LastFailoverTime) { $resource.LastFailoverTime.ToString() } else { "Never" }
+                    ResourceType = $resource.ResourceType
                 }
             }
-        } else {
-            $result.Error = "This node does not belong to any cluster"
         }
-    }
-    catch {
-        $result.Error = $_.Exception.Message
-    }
+        catch [Microsoft.FailoverClusters.PowerShell.ClusterCmdletException] {
+            # This is normal for non-cluster nodes
+            $result.Error = "Not part of a cluster"
+        }
+        catch {
+            # Other unexpected errors
+            $result.Error = $_.Exception.Message
+        }
 
-    $result | ConvertTo-Json -Depth 5
-  args:
-    executable: powershell.exe
-  register: cluster_health_data
+        # Return the result
+        $result | ConvertTo-Json -Depth 5
+      args:
+        executable: powershell.exe
+      register: cluster_data
 
-- name: Show cluster status
-  debug:
-    var: cluster_health_data.stdout
+    - name: Display cluster status
+      debug:
+        var: cluster_data.stdout
+
+    - name: Create HTML report
+      block:
+        - name: Prepare report data
+          set_fact:
+            report_data: "{{ (groups['all'] | map('extract', hostvars, ['cluster_data', 'stdout']) | list) | from_json }}"
+
+        - name: Generate HTML
+          template:
+            src: cluster_report.html.j2
+            dest: /tmp/cluster_report.html
+          delegate_to: localhost
+
+        - name: Send email report
+          mail:
+            host: smtp.example.com
+            port: 25
+            to: dba-team@example.com
+            subject: "SQL Cluster Health Report - {{ now() | date_format('%Y-%m-%d') }}"
+            body: "{{ lookup('file', '/tmp/cluster_report.html') }}"
+            subtype: html
+          delegate_to: localhost
+      when: "'all' in groups"
+      run_once: true
