@@ -1,16 +1,43 @@
-Stop : The term 'Stop' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
-the spelling of the name, or if a path was included, verify that the path is correct and try again.
-At line:1 char:26
-+ $ErrorActionPreference = Stop
-+                          ~~~~
-    + CategoryInfo          : ObjectNotFound: (Stop:String) [], CommandNotFoundException
-    + FullyQualifiedErrorId : CommandNotFoundException
- 
-Unknown : The term 'Unknown' is not recognized as the name of a cmdlet, function, script file, or operable program. 
-Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
-At line:22 char:16
-+  ClusterName = Unknown
-+                ~~~~~~~
-    + CategoryInfo          : ObjectNotFound: (Unknown:String) [], CommandNotFoundException
-    + FullyQualifiedErrorId : CommandNotFoundException
- 
+- name: Execute PowerShell script to gather cluster health data
+  win_shell: |
+    # Force all output to be treated as strings
+    $output = @()
+    
+    try {
+        $cluster = Get-Cluster -Cluster $env:COMPUTERNAME -ErrorAction SilentlyContinue
+        if ($cluster) {
+            $resources = Get-ClusterResource -Cluster $cluster.Name -ErrorAction SilentlyContinue
+            foreach ($resource in $resources) {
+                $output += @{
+                    'ClusterName' = [string]$cluster.Name
+                    'Node' = [string]$env:COMPUTERNAME
+                    'ResourceName' = [string]$resource.Name
+                    'Status' = [string]$resource.State
+                    'OwnerGroup' = [string]$resource.OwnerGroup
+                    'LastFailover' = [string]$resource.LastFailoverTime
+                }
+            }
+        } else {
+            throw "Cluster not found"
+        }
+    }
+    catch {
+        $output = @{
+            'ClusterName' = 'Unknown'
+            'Node' = [string]$env:COMPUTERNAME
+            'ResourceName' = 'Error'
+            'Status' = 'Failed'
+            'OwnerGroup' = 'N/A'
+            'LastFailover' = 'N/A'
+        }
+    }
+    
+    # Convert to JSON ensuring single object or array is handled
+    if ($output.Count -eq 1) {
+        $output[0] | ConvertTo-Json -Compress
+    } else {
+        $output | ConvertTo-Json -Compress
+    }
+  args:
+    executable: powershell.exe
+  register: cluster_health_data
