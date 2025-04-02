@@ -1,32 +1,40 @@
-< : The term '<' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
-spelling of the name, or if a path was included, verify that the path is correct and try again.
-At line:1 char:11
-+ $report = <html><body><h2>SQL Cluster Health Report</h2><table border ...
-+           ~
-    + CategoryInfo          : ObjectNotFound: (<:String) [], CommandNotFoundException
-    + FullyQualifiedErrorId : CommandNotFoundException
- 
-< : The term '<' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
-spelling of the name, or if a path was included, verify that the path is correct and try again.
-At line:2 char:12
-+ $report += <tr><th>Cluster Name</th><th>Node</th><th>Status</th><th>O ...
-+            ~
-    + CategoryInfo          : ObjectNotFound: (<:String) [], CommandNotFoundException
-    + FullyQualifiedErrorId : CommandNotFoundException
- 
-< : The term '<' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
-spelling of the name, or if a path was included, verify that the path is correct and try again.
-At line:13 char:13
-+  $report += <tr><td>$($env:COMPUTERNAME)</td><td colspan='4'>Failed t ...
-+             ~
-    + CategoryInfo          : ObjectNotFound: (<:String) [], CommandNotFoundException
-    + FullyQualifiedErrorId : CommandNotFoundException
- 
-< : The term '<' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
-spelling of the name, or if a path was included, verify that the path is correct and try again.
-At line:15 char:12
-+ $report += </table></body></html>
-+            ~
-    + CategoryInfo          : ObjectNotFound: (<:String) [], CommandNotFoundException
-    + FullyQualifiedErrorId : CommandNotFoundException
- 
+### Ansible Playbook to Generate and Send Consolidated SQL Cluster Health Report ###
+- name: Generate and send SQL Cluster Health Report
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Execute PowerShell script to gather cluster health data from each host
+      win_shell: |
+        $report = "`<html>`<body>`<h2>SQL Cluster Health Report`</h2>`<table border='1'>"
+        $report += "`<tr>`<th>Cluster Name`</th>`<th>Node`</th>`<th>Status`</th>`<th>Owner Group`</th>`<th>Last Failover`</th>`</tr>"
+        try {
+          $cluster = (Get-Cluster -Cluster $env:COMPUTERNAME).Name
+          $resources = Get-ClusterResource -Cluster $cluster
+          foreach ($resource in $resources) {
+            $status = $resource.State
+            $ownerGroup = $resource.OwnerGroup
+            $lastFailover = $resource.LastFailoverTime
+            $report += "`<tr>`<td>$($cluster)`</td>`<td>$($env:COMPUTERNAME)`</td>`<td>$($status)`</td>`<td>$($ownerGroup)`</td>`<td>$($lastFailover)`</td>`</tr>"
+          }
+        } catch {
+          $report += "`<tr>`<td>$($env:COMPUTERNAME)`</td>`<td colspan='4'>Failed to retrieve cluster info`</td>`</tr>"
+        }
+        $report += "`</table>`</body>`</html>"
+        return $report
+      args:
+        executable: powershell.exe
+      register: cluster_health_report
+
+    - name: Aggregate cluster health reports
+      ansible.builtin.set_fact:
+        consolidated_report: "{{ consolidated_report | default('') }}{{ cluster_health_report.stdout }}"
+
+    - name: Send consolidated health report via email
+      ansible.builtin.mail:
+        host: smtp.example.com
+        port: 25
+        from: cluster-report@example.com
+        to: admin@example.com
+        subject: 'SQL Cluster Health Report - Consolidated'
+        body: "{{ consolidated_report }}"
+        subtype: html
