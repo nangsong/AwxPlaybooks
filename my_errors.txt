@@ -5,29 +5,48 @@
   tasks:
     - name: Execute PowerShell script to gather cluster health data from each host
       win_shell: |
-        $report = "`<html>`<body>`<h2>SQL Cluster Health Report`</h2>`<table border='1'>"
-        $report += "`<tr>`<th>Cluster Name`</th>`<th>Node`</th>`<th>Status`</th>`<th>Owner Group`</th>`<th>Last Failover`</th>`</tr>"
         try {
           $cluster = (Get-Cluster -Cluster $env:COMPUTERNAME).Name
-          $resources = Get-ClusterResource -Cluster $cluster
+          $resources = Get-ClusterResource -Cluster $cluster | Select-Object -Property Name, State, OwnerGroup, LastFailoverTime
+          $output = @()
           foreach ($resource in $resources) {
-            $status = $resource.State
-            $ownerGroup = $resource.OwnerGroup
-            $lastFailover = $resource.LastFailoverTime
-            $report += "`<tr>`<td>$($cluster)`</td>`<td>$($env:COMPUTERNAME)`</td>`<td>$($status)`</td>`<td>$($ownerGroup)`</td>`<td>$($lastFailover)`</td>`</tr>"
+            $output += [PSCustomObject]@{
+              ClusterName = $cluster
+              Node = $env:COMPUTERNAME
+              ResourceName = $resource.Name
+              Status = $resource.State
+              OwnerGroup = $resource.OwnerGroup
+              LastFailover = $resource.LastFailoverTime
+            }
           }
+          $output | ConvertTo-Json -Compress
         } catch {
-          $report += "`<tr>`<td>$($env:COMPUTERNAME)`</td>`<td colspan='4'>Failed to retrieve cluster info`</td>`</tr>"
+          [PSCustomObject]@{
+            ClusterName = "Unknown"
+            Node = $env:COMPUTERNAME
+            ResourceName = "Error"
+            Status = "Failed"
+            OwnerGroup = "N/A"
+            LastFailover = "N/A"
+          } | ConvertTo-Json -Compress
         }
-        $report += "`</table>`</body>`</html>"
-        return $report
       args:
         executable: powershell.exe
-      register: cluster_health_report
+      register: cluster_health_data
 
-    - name: Aggregate cluster health reports
+    - name: Aggregate cluster health data
       ansible.builtin.set_fact:
-        consolidated_report: "{{ consolidated_report | default('') }}{{ cluster_health_report.stdout }}"
+        consolidated_data: "{{ consolidated_data | default([]) + [cluster_health_data.stdout | from_json] }}"
+
+    - name: Generate consolidated HTML report
+      ansible.builtin.shell: |
+        echo "<html><body><h2>SQL Cluster Health Report</h2><table border='1'>" > /tmp/cluster_health_report.html
+        echo "<tr><th>Cluster Name</th><th>Node</th><th>Resource Name</th><th>Status</th><th>Owner Group</th><th>Last Failover</th></tr>" >> /tmp/cluster_health_report.html
+        {% for cluster in consolidated_data %}
+        echo "<tr><td>{{ cluster.ClusterName }}</td><td>{{ cluster.Node }}</td><td>{{ cluster.ResourceName }}</td><td>{{ cluster.Status }}</td><td>{{ cluster.OwnerGroup }}</td><td>{{ cluster.LastFailover }}</td></tr>" >> /tmp/cluster_health_report.html
+        {% endfor %}
+        echo "</table></body></html>" >> /tmp/cluster_health_report.html
+      delegate_to: localhost
 
     - name: Send consolidated health report via email
       ansible.builtin.mail:
@@ -36,5 +55,5 @@
         from: cluster-report@example.com
         to: admin@example.com
         subject: 'SQL Cluster Health Report - Consolidated'
-        body: "{{ consolidated_report }}"
+        body: "{{ lookup('file', '/tmp/cluster_health_report.html') }}"
         subtype: html
