@@ -131,3 +131,20 @@ OR
 
 6. Apply the Changes
 	•	Click OK or Apply to confirm.
+
+✅ PowerShell to Drain a Cluster Node
+Suspend-ClusterNode -Name "NodeName" -Drain
+
+This will:
+	•	Pause the node (ClusterNode01) in the cluster.
+	•	Live migrate all roles (e.g., clustered VMs, SQL instances, etc.) to other nodes.
+	•	Prevent any new roles from being moved to that node.
+
+🧠 Check Node Status After Drain
+Get-ClusterNode -Name "ClusterNode01" | Format-List Name, State, NodeWeight
+
+✅ PowerShell to Resume the Node (After Maintenance)
+Resume-ClusterNode -Name "ClusterNode01" -Failback None
+
+Use -Failback None to resume the node without moving roles back (recommended).
+Use -Failback Immediate if you want roles to return to that node immediately.
