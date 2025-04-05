@@ -1,4 +1,133 @@
-{
-  "msg": "template error while templating string: expected token 'end of print statement', got 'string'. String: {% set cluster_json = cluster_info.stdout | from_json %}\n<div class=\"cluster-section\">\n  <h3>Cluster: {{ cluster_json.Cluster.Name }} (Status: {{ cluster_json.Cluster.State }})</h3>\n  <p><strong>Quorum:</strong> {{ cluster_json.Quorum.QuorumType }} ({{ cluster_json.Quorum.QuorumResource }})</p>\n  <p><strong>Cluster Service:</strong> {{ cluster_json.Service.Status }} (Start Type: {{ cluster_json.Service.StartType }})</p>\n  \n  <h4>Nodes:</h4>\n  <table class=\"node-table\">\n    <tr>\n      <th>Node Name</th>\n      <th>State</th>\n      <th>Dynamic Weight</th>\n      <th>Node Weight</th>\n    </tr>\n    {% for node in cluster_json.Nodes %}\n    <tr class=\"{{ 'status-up' if node.State -eq 'Up' else 'status-down' }}\">\n      <td>{{ node.Name }}</td>\n      <td>{{ node.State }}</td>\n      <td>{{ node.DynamicWeight }}</td>\n      <td>{{ node.NodeWeight }}</td>\n    </tr>\n    {% endfor %}\n  </table>\n  \n  <h4>Groups:</h4>\n  <table class=\"group-table\">\n    <tr>\n      <th>Group Name</th>\n      <th>Owner Node</th>\n      <th>State</th>\n    </tr>\n    {% for group in cluster_json.Groups %}\n    <tr class=\"{{ 'status-online' if group.State -eq 'Online' else 'status-offline' }}\">\n      <td>{{ group.Name }}</td>\n      <td>{{ group.OwnerNode }}</td>\n      <td>{{ group.State }}</td>\n    </tr>\n    {% endfor %}\n  </table>\n  \n  <h4>Resources:</h4>\n  <table class=\"resource-table\">\n    <tr>\n      <th>Resource Name</th>\n      <th>State</th>\n      <th>Owner Node</th>\n      <th>Type</th>\n    </tr>\n    {% for resource in cluster_json.Resources %}\n    <tr class=\"{{ 'status-online' if resource.State -eq 'Online' else 'status-offline' }}\">\n      <td>{{ resource.Name }}</td>\n      <td>{{ resource.State }}</td>\n      <td>{{ resource.OwnerNode }}</td>\n      <td>{{ resource.ResourceType }}</td>\n    </tr>\n    {% endfor %}\n  </table>\n</div>\n. expected token 'end of print statement', got 'string'",
-  "_ansible_no_log": false
-}
+
+⸻
+
+✅ Part 1: Removing a Node from the Cluster
+
+⚠️ Pre-checks before removing a node:
+
+	•	Ensure the node has no active cluster roles (move them to another node).
+	•	Ensure quorum will not be lost if the node is removed.
+	•	Validate cluster health before making changes.
+
+Step-by-step:
+	1.	Open Failover Cluster Manager (FCM)
+	•	On any node, open Failover Cluster Manager.
+	2.	Connect to Cluster (if not already connected)
+	•	Right-click on Failover Cluster Manager, choose “Connect to Cluster”, and select your cluster name.
+	3.	Drain Roles (if any are running on the node)
+	•	Expand the cluster name → go to Nodes
+	•	Right-click on the node to remove → “Pause” > “Drain Roles”
+	•	Wait for all roles to move.
+	4.	Pause and Evict the Node
+	•	Right-click on the node again → “More Actions” > “Evict”
+	•	Confirm the eviction.
+	5.	Verify Node Removal
+	•	The node should disappear from the Nodes section.
+	•	Review cluster events and validation to ensure no issues occurred.
+
+⸻
+
+✅ Part 2: Adding the Node Back to the Cluster
+
+⚠️ Pre-checks before adding a node:
+
+	•	Ensure the node has:
+	•	Same Windows Server OS version and patch level.
+	•	Cluster feature installed (Failover-Clustering feature).
+	•	Proper DNS resolution and firewall settings.
+	•	All necessary storage/network access.
+	•	Optional but recommended: Run “Validate Cluster” before adding.
+
+Step-by-step:
+	1.	Install Failover Clustering Feature (if not installed)
+On the node:
+
+Install-WindowsFeature -Name Failover-Clustering -IncludeManagementTools -Restart
+
+	2.	Open Failover Cluster Manager
+	•	On any node that’s already part of the cluster.
+	3.	Connect to the Cluster (if not already)
+	•	Right-click Failover Cluster Manager, choose “Connect to Cluster”, select your cluster.
+	4.	Add Node to Cluster
+	•	Right-click Nodes → “Add Node”
+	•	Type the hostname of the node you want to add.
+	5.	Validation Wizard (Recommended)
+	•	It will prompt you to run cluster validation.
+	•	Choose Yes and run “Run only tests I select” or “Run all tests” for thorough validation.
+	6.	Complete the Wizard
+	•	Once validation passes, follow the prompts to add the node.
+	7.	Verify Node Addition
+	•	Ensure the node appears under Nodes.
+	•	Verify it shows as Up and Running.
+	•	Optionally Resume the node if it’s paused.
+	8.	Test Cluster Role Failover (optional but recommended)
+	•	Move a role to the newly added node to verify its functionality.
+
+🛡️ Post Steps & Best Practices
+	•	Monitor Event Viewer for cluster-related logs.
+	•	Monitor Failover Cluster Manager for health.
+	•	Consider resuming cluster-aware backups/monitoring/patching tools on the added node.
+
+✅ Steps to Drain a Node (Without Eviction)
+
+1. Open Failover Cluster Manager
+	•	Open Failover Cluster Manager on any cluster node or your management workstation.
+	•	Connect to the relevant cluster if not already connected.
+
+2. Navigate to Nodes
+	•	Expand the cluster name → Click on Nodes.
+
+3. Pause and Drain the Node
+	•	Right-click the node you want to drain.
+	•	Select:
+“Pause” > “Drain Roles”
+
+This action will:
+	•	Move all cluster roles (VMs, file shares, SQL instances, etc.) to other nodes.
+	•	Mark the node as Paused, so it won’t receive new workloads until resumed.
+
+4. Verify Roles Were Moved
+	•	Go to Roles in the left pane.
+	•	Check that all roles are now running on other nodes.
+
+5. (Optional) Perform Maintenance
+	•	You can now safely:
+	•	Patch the node.
+	•	Reboot it.
+	•	Perform updates or diagnostics.
+
+✅ Resuming the Node After Maintenance
+
+Once you’re done:
+
+6. Resume the Node
+	•	Go back to Nodes, right-click the paused node.
+	•	Choose:
+“Resume” > “Do Not Fail Roles Back” (recommended to avoid unnecessary failovers)
+OR
+“Resume” > “Fail Roles Back” (if you want the roles to return to the original node).
+
+✅ Steps to Set Node Priority (Preferred Owners) Using Failover Cluster Manager
+
+1. Open Failover Cluster Manager
+	•	Open Failover Cluster Manager.
+	•	Connect to your cluster if not already connected.
+
+2. Navigate to Roles
+	•	In the left pane, expand your cluster and click on Roles.
+	•	You’ll see the list of clustered roles (VMs, file servers, SQL instances, etc.).
+
+3. Right-click the Role You Want to Prioritize
+	•	Select Properties.
+
+4. Go to the ‘Preferred Owners’ Tab
+	•	In the Properties window, go to the “Preferred Owners” tab.
+
+5. Set Node Priority
+	•	You’ll see a list of all cluster nodes.
+	•	Check the boxes next to nodes you want to allow as preferred owners.
+	•	Reorder them using Move Up / Move Down — the node at the top will have the highest priority.
+⚠️ If a role fails, the cluster will try nodes in this order.
+
+6. Apply the Changes
+	•	Click OK or Apply to confirm.
