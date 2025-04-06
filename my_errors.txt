@@ -203,3 +203,34 @@ Use -Failback Immediate if you want roles to return to that node immediately.
         run_level: highest
         state: present
       tags: schedule_task
+
+================================
+    - name: Create scheduled task to run Disk Cleanup on the last Sunday of each month at 5:00 PM
+      win_schedule_task:
+        name: "Monthly Disk Cleanup"
+        description: "Runs Disk Cleanup using preconfigured settings on the last Sunday of every month"
+        actions:
+          - path: C:\Scripts\disk_cleanup.bat
+        triggers:
+          - schedule_type: MonthlyDOW
+            days_of_week:
+              - Sunday
+            months:
+              - January
+              - February
+              - March
+              - April
+              - May
+              - June
+              - July
+              - August
+              - September
+              - October
+              - November
+              - December
+            weeks:
+              - last
+            start_time: '17:00'
+        username: SYSTEM
+        run_level: highest
+        state: present
