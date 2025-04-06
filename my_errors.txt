@@ -148,3 +148,58 @@ Resume-ClusterNode -Name "ClusterNode01" -Failback None
 
 Use -Failback None to resume the node without moving roles back (recommended).
 Use -Failback Immediate if you want roles to return to that node immediately.
+
+===========================================
+===========================================
+===========================================
+
+---
+- name: Schedule Disk Cleanup on Windows Servers with Registry Config
+  hosts: windows_servers
+  gather_facts: no
+  tasks:
+
+    - name: Preconfigure Disk Cleanup options in registry
+      win_regedit:
+        path: "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VolumeCaches\\{{ item }}"
+        name: StateFlags0001
+        data: 2
+        type: dword
+      loop:
+        - Temporary Files
+        - Recycle Bin
+        - Setup Log Files
+        - Temporary Setup Files
+        - Windows Error Reporting Archive Files
+        - Windows Error Reporting Queue Files
+        - System created Windows Error Reporting
+        - Windows Upgrade Log Files
+        - Temporary Sync Files
+        - Internet Cache Files
+        - Delivery Optimization Files
+        - Diagnostic Data Viewer database files
+        - Thumbnails
+      tags: configure_cleanmgr
+
+    - name: Create disk cleanup script
+      win_copy:
+        dest: C:\Scripts\disk_cleanup.bat
+        content: |
+          cleanmgr.exe /sagerun:1
+      tags: create_script
+
+    - name: Create scheduled task to run disk cleanup every Sunday at 5:00 PM
+      win_schedule_task:
+        name: "Weekly Disk Cleanup"
+        description: "Runs Disk Cleanup using preconfigured settings"
+        actions:
+          - path: C:\Scripts\disk_cleanup.bat
+        schedule:
+          - weekly
+        days_of_week:
+          - Sunday
+        start_time: '17:00'
+        username: "SYSTEM"
+        run_level: highest
+        state: present
+      tags: schedule_task
