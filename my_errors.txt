@@ -147,14 +147,14 @@ Get-ClusterNode -Name "ClusterNode01" | Format-List Name, State, NodeWeight
 Resume-ClusterNode -Name "ClusterNode01" -Failback None
 
 Use -Failback None to resume the node without moving roles back (recommended).
-Use -Failback Immediate if you want roles to return to that node immediately.
+Use -Failback Immediate if you want roles to return to that node 
 
-===========================================
-===========================================
-===========================================
 
-{
-  "changed": false,
-  "msg": "a trigger entry must contain a key 'type' with a value of 'event', 'time', 'daily', 'weekly', 'monthly', 'monthlydow', 'idle', 'registration', 'boot', 'logon', 'session_state_change'",
-  "_ansible_no_log": false
-}
+
+Get-WinEvent -LogName System -FilterHashtable @{Id=1074} -MaxEvents 1 | 
+Select-Object TimeCreated,
+              @{Name='User'; Expression={$_.Properties[6].Value}},
+              @{Name='Process'; Expression={$_.Properties[0].Value}},
+              @{Name='Reason'; Expression={$_.Properties[2].Value}},
+              @{Name='Comment'; Expression={$_.Properties[5].Value}}
+
