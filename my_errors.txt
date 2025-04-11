@@ -161,42 +161,5 @@ Select-Object TimeCreated,
 
 
 
----
-- name: Drain a Windows Failover Cluster node and display cluster info
-  hosts: windows_cluster_nodes
-  gather_facts: no
-  tasks:
-
-    - name: Drain the cluster node (pause with drain)
-      ansible.windows.win_shell: |
-        Suspend-ClusterNode -Drain
-      register: drain_result
-
-    - name: Display output from draining node
-      debug:
-        var: drain_result.stdout
-
-    - name: Get cluster name
-      ansible.windows.win_shell: |
-        (Get-Cluster).Name
-      register: cluster_name
-
-    - name: Display cluster name
-      debug:
-        msg: "Cluster Name: {{ cluster_name.stdout }}"
-
-    - name: Get clustered roles and their current owner nodes
-      ansible.windows.win_shell: |
-        Get-ClusterGroup | Select-Object Name, OwnerNode | ConvertTo-Json -Compress
-      register: cluster_roles
-
-    - name: Display clustered roles and owner nodes
-      set_fact:
-        cluster_roles_info: "{{ cluster_roles.stdout | from_json }}"
-
-    - name: Print role ownership
-      debug:
-        msg: "Role '{{ item.Name }}' is owned by node '{{ item.OwnerNode }}'"
-      loop: "{{ cluster_roles_info }}"
 
 
