@@ -1,0 +1,71 @@
+Standard Operating Procedure (SOP)
+Deployment of [Agent Name] on Windows Servers via Ansible
+1. Purpose
+To provide a standardized procedure for deploying the [Agent Name] on Windows Servers using Ansible Automation Platform, ensuring consistency, reliability, and traceability across environments.
+2. Scope
+This procedure applies to all Windows servers managed by [Organization/Team Name] where the [Agent Name] must be deployed using the Ansible Automation Platform.
+3. Prerequisites
+- Ansible Automation Platform is installed and accessible.
+- Windows servers are reachable and configured for WinRM access.
+- The required agent installer is downloaded from the Nexsus repository.
+- Administrative credentials or service account access to target Windows servers.
+- Required inventory files and Ansible variables are defined.
+4. Roles and Responsibilities
+Role	Responsibility
+System Engineer	Prepare and execute the deployment
+QA/Operations	Validate post-deployment success
+Ansible Administrator	Maintain playbooks, roles, and credentials
+5. Definitions and References
+- Nexsus Repository: Internal artifact repository hosting agent binaries.
+- Ansible Inventory: List of target Windows servers grouped for deployment.
+- Distribution Point: Server or shared path where the agent binary is placed before deployment.
+6. Tools and Resources Required
+- Ansible Tower / AAP (Automation Controller)
+- Access to Nexsus repository
+- Valid Ansible playbook and roles
+- Access to distribution point folder (e.g., \\distserver\packages\agent)
+7. Procedure
+7.1. Prepare the Deployment Package
+1. Download the latest version of the [Agent Name] from the Nexsus repository.
+2. Place the installer in the designated distribution folder:
+   \\<DistributionServer>\packages\<AgentName>\<Version>\
+7.2. Validate Server Access
+1. Confirm WinRM connectivity to all target Windows servers using Ansible ping module:
+   ansible windows_group -m win_ping
+7.3. Run the Deployment Playbook
+1. Launch the deployment from the Ansible Automation Platform.
+2. Use the correct job template and inventory.
+3. Monitor output logs for success/failure.
+
+   Sample command for CLI:
+   ansible-playbook deploy_agent.yml -i inventory/windows.ini
+7.4. Post-Deployment Validation
+1. Ensure the agent service is installed and running:
+   - name: Ensure agent is running
+     win_service:
+       name: "<AgentServiceName>"
+       state: started
+2. Verify successful registration (if applicable) or connectivity to central system.
+8. Rollback Procedure
+If deployment fails:
+1. Review logs in Ansible and correct issues.
+2. If rollback is required, uninstall the agent using:
+   - name: Uninstall agent
+     win_package:
+       path: "C:\Program Files\<AgentName>\uninstall.exe"
+       arguments: "/quiet"
+       state: absent
+9. Troubleshooting
+Issue	Solution
+WinRM unreachable	Check firewall, WinRM service, or authentication issues
+Agent fails to install	Validate package integrity and permissions
+Agent service not starting	Check system requirements and dependencies
+10. Audit and Logging
+- All job runs are logged in the Ansible Automation Platform dashboard.
+- Store execution logs in central logging system if configured.
+- Maintain a deployment log entry in the change management system.
+11. Document History
+Version	Date	Author	Description
+			
+1.0	YYYY-MM-DD	Your Name	Initial SOP creation
+
