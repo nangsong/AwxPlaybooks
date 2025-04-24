@@ -160,6 +160,21 @@ Select-Object TimeCreated,
 &&&&&&&&&&&&&&&&&&$$$$$$$$$$$$$$$$$$@@@@@@nangsonghermann@gmail.com
 
 
+---
+- name: Add domain user to local Administrators group
+  hosts: windows_servers
+  gather_facts: no
+  become: false
 
+  vars:
+    domain_user: "DOMAIN\\username"  # Replace with your actual domain and username
+
+  tasks:
+    - name: Add domain user to local Administrators group
+      ansible.windows.win_group_membership:
+        name: Administrators
+        members:
+          - "{{ domain_user }}"
+        state: present
 
 
