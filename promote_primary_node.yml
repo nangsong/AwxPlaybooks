@@ -1,0 +1,56 @@
+---
+- name: Promote a Windows cluster node to primary and verify role ownership
+  hosts: all
+  gather_facts: no
+  vars:
+    target_primary_node: "NODE1"
+
+  tasks:
+    - name: Get all cluster group names (roles)
+      win_shell: |
+        Get-ClusterGroup | Select-Object -ExpandProperty Name
+      register: cluster_roles_raw
+
+    - name: Set clean list of cluster role names
+      set_fact:
+        cluster_roles: "{{ cluster_roles_raw.stdout_lines }}"
+
+    - name: Move each cluster role to the target primary node
+      win_shell: |
+        Move-ClusterGroup -Name "{{ item }}" -Node "{{ target_primary_node }}"
+      loop: "{{ cluster_roles }}"
+      register: move_results
+
+    - name: Wait for cluster group to fully transfer ownership
+      win_shell: |
+        $owner = (Get-ClusterGroup -Name "{{ item }}").OwnerNode.Name
+        Write-Output $owner
+      loop: "{{ cluster_roles }}"
+      register: owner_check
+      retries: 5
+      delay: 5
+      until: owner_check.stdout_lines[loop.index0] == target_primary_node
+
+    - name: Build verification report
+      set_fact:
+        cluster_report: |
+          Cluster Role Promotion Report
+
+          Target Node: {{ target_primary_node }}
+
+          {% for i in range(cluster_roles | length) %}
+          Role: {{ cluster_roles[i] }}
+          Intended Owner: {{ target_primary_node }}
+          Actual Owner: {{ owner_check.results[i].stdout }}
+          Result: {{ "✅ SUCCESS" if owner_check.results[i].stdout == target_primary_node else "❌ FAILED" }}
+          {% endfor %}
+
+    - name: Send email with the promotion report
+      mail:
+        host: "{{ smtp_server }}"
+        port: "{{ email_port }}"
+        to: "{{ email_recipient }}"
+        from: "{{ email_sender }}"
+        subject: "{{ email_subject }}"
+        body: "{{ cluster_report }}"
+        secure: starttls
